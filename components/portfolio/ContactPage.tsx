@@ -175,10 +175,6 @@ export default function ContactPage() {
                 <p className="text-xs text-[#9ca3af] uppercase tracking-wider font-medium mb-1">
                   Current Focus
                 </p>
-                <p className="text-sm text-white">
-                  Full-Stack, Backend, DevOps, AI, and React Native Mobile
-                  Development
-                </p>
                 <div className="mt-3 flex flex-wrap gap-2">
                   {[
                     "Full-Stack",

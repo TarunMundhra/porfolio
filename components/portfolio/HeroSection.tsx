@@ -53,26 +53,6 @@ export default function HeroSection() {
         </motion.p>
 
         <motion.div
-          className="mt-6 flex flex-wrap items-center justify-center gap-2"
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.5, duration: 0.6 }}
-        >
-          <span className="text-xs uppercase tracking-wider text-[#9ca3af] mr-1">
-            Highlights
-          </span>
-          <span className="px-3 py-1 rounded-full bg-white/[0.05] border border-white/[0.08] text-xs text-white">
-            CGPA 8.13/10
-          </span>
-          <span className="px-3 py-1 rounded-full bg-white/[0.05] border border-white/[0.08] text-xs text-white">
-            JEE Main Top 1%
-          </span>
-          <span className="px-3 py-1 rounded-full bg-white/[0.05] border border-white/[0.08] text-xs text-white">
-            Vice-Captain, GC-OpenSoft
-          </span>
-        </motion.div>
-
-        <motion.div
           className="flex flex-wrap items-center justify-center gap-4 mt-8"
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
