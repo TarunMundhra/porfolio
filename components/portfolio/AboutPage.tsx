@@ -32,7 +32,6 @@ const skills = {
     "Python",
     "C++",
     "C",
-    "Go",
     "HTML",
     "CSS",
     "SQL",
@@ -46,11 +45,11 @@ const skills = {
     "Tailwind CSS",
     "NativeWind",
     "TanStack Query",
+    "JWT",
   ],
   Databases: [
     "MongoDB",
     "PostgreSQL",
-    "Redis",
     "IndexedDB",
     "MySQL",
   ],
@@ -61,9 +60,7 @@ const skills = {
     "Postman",
     "AWS Lambda",
     "Cloudinary",
-    "JWT",
-    "Docker",
-    "WebSockets",
+    "Multer",
     "Service Workers",
   ],
 };
@@ -84,11 +81,6 @@ const achievements = [
     title: "NCC 'B' Certificate",
     description:
       "Certified training camp involving drills and leadership development",
-  },
-  {
-    icon: <Trophy size={18} />,
-    title: "Illumination Competition 2025",
-    description: "1st position among 25 halls at IIT Kharagpur",
   },
 ];
 

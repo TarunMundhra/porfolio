@@ -52,7 +52,8 @@ export default function HeroSection() {
             View Projects
           </button>
           <a
-            href="#"
+            href="/Tarun-Mundhra-Resume.pdf"
+            download="Tarun-Mundhra-Resume.pdf"
             className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl border border-[#11998e]/40 text-[#e5e7eb] text-sm font-medium transition-all hover:bg-[#11998e]/10 hover:border-[#11998e]/70 hover:-translate-y-0.5 active:translate-y-0"
           >
             <FileDown size={16} />
