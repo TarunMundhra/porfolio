@@ -41,7 +41,7 @@ const contactInfo = [
     label: "Phone",
     value: "+91 9348896824",
     href: "tel:+919348896824",
-    copyable: false,
+    copyable: true,
   },
   {
     icon: <Github size={18} />,

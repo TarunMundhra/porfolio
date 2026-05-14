@@ -18,13 +18,20 @@ const fadeInUp = {
   animate: { opacity: 1, y: 0, transition: { duration: 0.5 } },
 };
 
+interface ProjectLink {
+  label: string;
+  href: string;
+  tooltip: string;
+  kind: "demo" | "code" | "org";
+}
+
 interface Project {
   title: string;
   emoji: string;
   description: string;
   highlights: string[];
   tech: string[];
-  links: { label: string; href: string }[];
+  links: ProjectLink[];
 }
 
 const projects: Project[] = [
@@ -54,11 +61,20 @@ const projects: Project[] = [
       {
         label: "Live Demo",
         href: "https://appetize.io/app/b_udvy47sip3l7ybn7leys5gn34e",
+        tooltip: "Open live mobile demo",
+        kind: "demo",
       },
-      { label: "Org", href: "https://github.com/KGP-Presence" },
+      {
+        label: "Org",
+        href: "https://github.com/KGP-Presence",
+        tooltip: "Open GitHub org",
+        kind: "org",
+      },
       {
         label: "View Code",
         href: "https://github.com/KGP-Presence/Attendane-Tracker-Mobile-App",
+        tooltip: "Open repository",
+        kind: "code",
       },
     ],
   },
@@ -90,14 +106,20 @@ const projects: Project[] = [
       {
         label: "Live Demo",
         href: "https://gig-flow-frontend-eight.vercel.app/",
+        tooltip: "Open live demo",
+        kind: "demo",
       },
       {
         label: "Frontend Code",
         href: "https://github.com/TarunMundhra/GigFlow_Frontend",
+        tooltip: "Open frontend repo",
+        kind: "code",
       },
       {
         label: "Backend Code",
         href: "https://github.com/TarunMundhra/GigFlow",
+        tooltip: "Open backend repo",
+        kind: "code",
       },
     ],
   },
@@ -125,6 +147,8 @@ const projects: Project[] = [
       {
         label: "View Code",
         href: "https://github.com/GC-OpenSoft-2026/Algorithmic-Trading-Simulator",
+        tooltip: "Open repository",
+        kind: "code",
       },
     ],
   },
@@ -147,7 +171,12 @@ const projects: Project[] = [
       "JWT",
     ],
     links: [
-      { label: "View Code", href: "https://github.com/TarunMundhra/taskFlow" },
+      {
+        label: "View Code",
+        href: "https://github.com/TarunMundhra/taskFlow",
+        tooltip: "Open repository",
+        kind: "code",
+      },
     ],
   },
 ];
@@ -186,13 +215,16 @@ export default function ProjectsPage() {
                       href={link.href}
                       target="_blank"
                       rel="noopener noreferrer"
+                      title={link.tooltip}
                       className="w-8 h-8 rounded-lg bg-white/[0.04] border border-white/[0.06] flex items-center justify-center text-[#9ca3af] hover:text-[#11998e] hover:border-[#11998e]/40 transition-all"
                       aria-label={link.label}
                     >
-                      {link.label.includes("Code") ? (
-                        <Github size={14} />
-                      ) : (
+                      {link.kind === "demo" ? (
                         <ExternalLink size={14} />
+                      ) : link.kind === "org" ? (
+                        <ExternalLink size={14} />
+                      ) : (
+                        <Github size={14} />
                       )}
                     </a>
                   ))}
