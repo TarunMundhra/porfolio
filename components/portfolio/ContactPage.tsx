@@ -33,7 +33,7 @@ const contactInfo = [
     icon: <Mail size={18} />,
     label: "Email",
     value: "lthamundhra5@gmail.com",
-    href: "mailto:lthamundhra5@gmail.com?subject=Portfolio%20Contact",
+    href: "https://mail.google.com/mail/?view=cm&fs=1&to=lthamundhra5@gmail.com&su=Portfolio%20Contact",
     copyable: true,
   },
   {
@@ -182,7 +182,7 @@ export default function ContactPage() {
               </div>
 
               <a
-                href="mailto:lthamundhra5@gmail.com?subject=Portfolio%20Contact"
+                href="https://mail.google.com/mail/?view=cm&fs=1&to=lthamundhra5@gmail.com&su=Portfolio%20Contact"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="w-full inline-flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl bg-gradient-to-br from-[#085d56] to-[#00998c] text-white text-sm font-medium transition-all hover:from-[#074f49] hover:to-[#007a70] hover:shadow-lg hover:shadow-[#11998e]/25 hover:-translate-y-0.5 active:translate-y-0"
