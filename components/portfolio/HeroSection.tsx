@@ -23,6 +23,19 @@ export default function HeroSection() {
           Portfolio
         </motion.p>
 
+        <div className="flex justify-center mb-6">
+          <div className="p-1.5 rounded-full bg-gradient-to-br from-[#085d56] via-[#11998e] to-[#22c55e] shadow-[0_12px_40px_rgba(17,153,142,0.25)]">
+            <div className="rounded-full bg-[#020617] p-1">
+              <img
+                src="/Tarun.jpeg"
+                alt="Tarun Mundhra"
+                className="h-28 w-28 sm:h-32 sm:w-32 rounded-full object-cover"
+                loading="eager"
+              />
+            </div>
+          </div>
+        </div>
+
         <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold leading-tight">
           <span className="bg-gradient-to-r from-[#085d56] via-[#11998e] to-[#22c55e] bg-clip-text text-transparent">
             Tarun Mundhra
@@ -38,6 +51,26 @@ export default function HeroSection() {
           Building high-performance trading systems, scalable backend
           architectures, and cross-platform applications.
         </motion.p>
+
+        <motion.div
+          className="mt-6 flex flex-wrap items-center justify-center gap-2"
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.5, duration: 0.6 }}
+        >
+          <span className="text-xs uppercase tracking-wider text-[#9ca3af] mr-1">
+            Highlights
+          </span>
+          <span className="px-3 py-1 rounded-full bg-white/[0.05] border border-white/[0.08] text-xs text-white">
+            CGPA 8.13/10
+          </span>
+          <span className="px-3 py-1 rounded-full bg-white/[0.05] border border-white/[0.08] text-xs text-white">
+            JEE Main Top 1%
+          </span>
+          <span className="px-3 py-1 rounded-full bg-white/[0.05] border border-white/[0.08] text-xs text-white">
+            Vice-Captain, GC-OpenSoft
+          </span>
+        </motion.div>
 
         <motion.div
           className="flex flex-wrap items-center justify-center gap-4 mt-8"

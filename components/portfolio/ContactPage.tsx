@@ -179,6 +179,22 @@ export default function ContactPage() {
                   Full-Stack, Backend, DevOps, AI, and React Native Mobile
                   Development
                 </p>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {[
+                    "Full-Stack",
+                    "Backend",
+                    "DevOps",
+                    "AI",
+                    "React Native",
+                  ].map((chip) => (
+                    <span
+                      key={chip}
+                      className="px-2.5 py-1 rounded-full bg-white/[0.05] border border-white/[0.08] text-[11px] text-[#e5e7eb]"
+                    >
+                      {chip}
+                    </span>
+                  ))}
+                </div>
               </div>
 
               <a

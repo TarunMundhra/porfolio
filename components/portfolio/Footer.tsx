@@ -6,9 +6,14 @@ export default function Footer() {
   return (
     <footer className="border-t border-white/5 mt-auto">
       <div className="max-w-5xl mx-auto px-6 py-8 flex flex-col md:flex-row items-center justify-between gap-4">
-        <p className="text-[#9ca3af] text-sm">
-          &copy; 2026 Tarun Mundhra. All rights reserved.
-        </p>
+        <div className="text-center md:text-left">
+          <p className="text-[#9ca3af] text-sm">
+            &copy; 2026 Tarun Mundhra. All rights reserved.
+          </p>
+          <p className="text-[#6b7280] text-xs mt-1">
+            Last updated: May 2026
+          </p>
+        </div>
         <div className="flex items-center gap-4">
           <a
             href="mailto:lthamundhra5@gmail.com"
