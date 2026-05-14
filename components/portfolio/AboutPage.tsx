@@ -82,6 +82,11 @@ const achievements = [
     description:
       "Certified training camp involving drills and leadership development",
   },
+  {
+    icon: <Trophy size={18} />,
+    title: "Illumination Competition 2025 | MMM Hall",
+    description: "1st position among 25 halls at IIT Kharagpur",
+  },
 ];
 
 const coursework = [
