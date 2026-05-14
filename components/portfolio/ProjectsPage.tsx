@@ -51,7 +51,49 @@ const projects: Project[] = [
       "TanStack Query",
     ],
     links: [
-      { label: "View Code", href: "https://github.com/TarunMundhra" },
+      {
+        label: "View Code",
+        href: "https://github.com/KGP-Presence/Attendane-Tracker-Mobile-App",
+      },
+    ],
+  },
+  {
+    title: "GigFlow",
+    emoji: "🌊",
+    description:
+      "A MERN-based freelance marketplace with a polished frontend and a secure backend for gigs, bids, and user workflows.",
+    highlights: [
+      "Built a responsive landing, gig browsing, and bid submission experience optimized for recruiter review",
+      "Implemented JWT-based auth, profile updates, and protected routes for users, gigs, and bids",
+      "Modeled gig and bid workflows in MongoDB with Mongoose and role-aware actions",
+      "Integrated API communication with Axios and schema validation for safer form flows",
+    ],
+    tech: [
+      "Next.js",
+      "React",
+      "Tailwind CSS",
+      "TypeScript",
+      "Axios",
+      "Zod",
+      "React Hook Form",
+      "Node.js",
+      "Express",
+      "MongoDB",
+      "JWT",
+    ],
+    links: [
+      {
+        label: "Live Demo",
+        href: "https://gig-flow-frontend-eight.vercel.app/",
+      },
+      {
+        label: "Frontend Code",
+        href: "https://github.com/TarunMundhra/GigFlow_Frontend",
+      },
+      {
+        label: "Backend Code",
+        href: "https://github.com/TarunMundhra/GigFlow",
+      },
     ],
   },
   {
@@ -75,7 +117,10 @@ const projects: Project[] = [
       "Docker",
     ],
     links: [
-      { label: "View Code", href: "https://github.com/TarunMundhra" },
+      {
+        label: "View Code",
+        href: "https://github.com/GC-OpenSoft-2026/Algorithmic-Trading-Simulator",
+      },
     ],
   },
   {
@@ -97,7 +142,7 @@ const projects: Project[] = [
       "JWT",
     ],
     links: [
-      { label: "View Code", href: "https://github.com/TarunMundhra" },
+      { label: "View Code", href: "https://github.com/TarunMundhra/taskFlow" },
     ],
   },
 ];
