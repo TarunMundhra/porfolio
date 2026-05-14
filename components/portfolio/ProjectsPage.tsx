@@ -52,6 +52,11 @@ const projects: Project[] = [
     ],
     links: [
       {
+        label: "Live Demo",
+        href: "https://appetize.io/app/b_udvy47sip3l7ybn7leys5gn34e",
+      },
+      { label: "Org", href: "https://github.com/KGP-Presence" },
+      {
         label: "View Code",
         href: "https://github.com/KGP-Presence/Attendane-Tracker-Mobile-App",
       },
