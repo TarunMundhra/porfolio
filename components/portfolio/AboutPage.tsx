@@ -116,8 +116,8 @@ export default function AboutPage() {
         <SectionHeading title="Education" subtitle="Academic background" />
         <GlassCard className="p-6 md:p-8" hover={false}>
           <div className="flex flex-col md:flex-row md:items-start gap-4">
-            <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-[#7c3aed]/10 border border-[#7c3aed]/20 flex items-center justify-center">
-              <GraduationCap size={22} className="text-[#7c3aed]" />
+            <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-[#11998e]/10 border border-[#11998e]/20 flex items-center justify-center">
+              <GraduationCap size={22} className="text-[#11998e]" />
             </div>
             <div className="flex-1">
               <h3 className="text-lg font-semibold text-white">
@@ -168,7 +168,7 @@ export default function AboutPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {Object.entries(skills).map(([category, items]) => (
             <GlassCard key={category} className="p-5">
-              <h3 className="text-sm font-semibold text-[#7c3aed] uppercase tracking-wider mb-3 flex items-center gap-2">
+              <h3 className="text-sm font-semibold text-[#11998e] uppercase tracking-wider mb-3 flex items-center gap-2">
                 <Code size={14} />
                 {category}
               </h3>

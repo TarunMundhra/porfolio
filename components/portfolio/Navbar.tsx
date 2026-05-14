@@ -17,12 +17,23 @@ export default function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false);
 
   return (
-    <nav className="fixed top-0 left-0 right-0 z-50 backdrop-blur-xl bg-[#020617]/80 border-b border-white/5">
-      <div className="max-w-5xl mx-auto px-6 h-16 flex items-center justify-between">
+    <nav className="fixed top-4 left-1/2 -translate-x-1/2 z-50 w-[calc(100%-2rem)] max-w-2xl">
+      {/* Floating pill navbar */}
+      <div className="
+        flex items-center justify-between
+        px-5 h-14
+        rounded-2xl
+        bg-[#09090a]/80 backdrop-blur-xl
+        border border-white/[0.08]
+        shadow-[0_8px_32px_rgba(0,0,0,0.4)]
+      ">
         {/* Logo */}
         <button
           onClick={() => setCurrentPage("about")}
-          className="text-lg font-bold bg-gradient-to-r from-[#7c3aed] to-[#22c55e] bg-clip-text text-transparent hover:opacity-80 transition-opacity"
+          className="text-base font-bold tracking-tight
+            bg-gradient-to-r from-[#11998e] to-[#22c55e] 
+            bg-clip-text text-transparent 
+            hover:opacity-80 transition-opacity"
         >
           TM
         </button>
@@ -33,21 +44,19 @@ export default function Navbar() {
             <button
               key={item.page}
               onClick={() => setCurrentPage(item.page)}
-              className="relative px-4 py-2 text-sm font-medium transition-colors"
+              className={`relative px-4 py-1.5 rounded-lg text-sm font-medium 
+                transition-all duration-200
+                ${currentPage === item.page
+                  ? "text-white bg-[#11998e]/20 border border-[#11998e]/30"
+                  : "text-[#9ca3af] hover:text-white hover:bg-white/[0.06]"
+                }`}
             >
-              <span
-                className={
-                  currentPage === item.page
-                    ? "text-white"
-                    : "text-[#9ca3af] hover:text-white"
-                }
-              >
-                {item.label}
-              </span>
+              {item.label}
               {currentPage === item.page && (
                 <motion.div
                   layoutId="navIndicator"
-                  className="absolute bottom-0 left-2 right-2 h-0.5 bg-gradient-to-r from-[#7c3aed] to-[#22c55e] rounded-full"
+                  className="absolute -bottom-0.5 left-3 right-3 h-px 
+                    bg-gradient-to-r from-[#11998e] to-[#22c55e] rounded-full"
                   transition={{ type: "spring", stiffness: 380, damping: 30 }}
                 />
               )}
@@ -61,19 +70,20 @@ export default function Navbar() {
           className="md:hidden text-[#9ca3af] hover:text-white transition-colors"
           aria-label="Toggle menu"
         >
-          {mobileOpen ? <X size={22} /> : <Menu size={22} />}
+          {mobileOpen ? <X size={20} /> : <Menu size={20} />}
         </button>
       </div>
 
-      {/* Mobile Nav */}
+      {/* Mobile Nav — drops below the pill */}
       {mobileOpen && (
         <motion.div
-          initial={{ opacity: 0, y: -10 }}
+          initial={{ opacity: 0, y: -8 }}
           animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -10 }}
-          className="md:hidden border-t border-white/5 bg-[#020617]/95 backdrop-blur-xl"
+          exit={{ opacity: 0, y: -8 }}
+          className="mt-2 rounded-2xl bg-[#09090a]/90 backdrop-blur-xl 
+            border border-white/[0.08] shadow-[0_8px_32px_rgba(0,0,0,0.4)]"
         >
-          <div className="px-6 py-4 flex flex-col gap-2">
+          <div className="px-4 py-3 flex flex-col gap-1">
             {navItems.map((item) => (
               <button
                 key={item.page}
@@ -81,11 +91,12 @@ export default function Navbar() {
                   setCurrentPage(item.page);
                   setMobileOpen(false);
                 }}
-                className={`text-left px-4 py-2.5 rounded-lg text-sm font-medium transition-all ${
-                  currentPage === item.page
-                    ? "text-white bg-white/10 border-l-2 border-[#7c3aed]"
-                    : "text-[#9ca3af] hover:text-white hover:bg-white/5"
-                }`}
+                className={`text-left px-4 py-2.5 rounded-xl text-sm font-medium 
+                  transition-all
+                  ${currentPage === item.page
+                    ? "text-white bg-[#11998e]/20 border border-[#11998e]/30"
+                    : "text-[#9ca3af] hover:text-white hover:bg-white/[0.06]"
+                  }`}
               >
                 {item.label}
               </button>

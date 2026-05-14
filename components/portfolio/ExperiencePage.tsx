@@ -47,7 +47,7 @@ const experiences: Experience[] = [
     role: "Vice-Captain, MMM Hall of Residence",
     period: "2026",
     icon: <TrendingUp size={22} />,
-    accentColor: "#7c3aed",
+    accentColor: "#11998e",
     description:
       "Led a 20-member cross-functional development team to design and deliver a full-stack, institutional-grade algorithmic trading simulator under competitive inter-hall conditions at IIT Kharagpur.",
     highlights: [
@@ -111,7 +111,7 @@ export default function ExperiencePage() {
       {/* Timeline */}
       <div className="relative">
         {/* Timeline line */}
-        <div className="hidden md:block absolute left-[23px] top-0 bottom-0 w-px bg-gradient-to-b from-[#7c3aed] via-[#7c3aed]/30 to-[#22c55e]/30" />
+        <div className="hidden md:block absolute left-[23px] top-0 bottom-0 w-px bg-gradient-to-b from-[#085d56] via-[#11998e]/30 to-[#22c55e]/30" />
 
         <div className="space-y-8">
           {experiences.map((exp, index) => (
@@ -172,7 +172,7 @@ export default function ExperiencePage() {
                         href={link.href}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="w-8 h-8 rounded-lg bg-white/[0.04] border border-white/[0.06] flex items-center justify-center text-[#9ca3af] hover:text-[#7c3aed] hover:border-[#7c3aed]/40 transition-all"
+                        className="w-8 h-8 rounded-lg bg-white/[0.04] border border-white/[0.06] flex items-center justify-center text-[#9ca3af] hover:text-[#11998e] hover:border-[#11998e]/40 transition-all"
                         aria-label={link.label}
                       >
                         {link.label === "GitHub" ? (

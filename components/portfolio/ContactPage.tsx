@@ -99,7 +99,7 @@ export default function ContactPage() {
             <GlassCard key={item.label} className="p-5" hover={true}>
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
-                  <div className="w-10 h-10 rounded-xl bg-[#7c3aed]/10 border border-[#7c3aed]/20 flex items-center justify-center text-[#7c3aed] flex-shrink-0">
+                  <div className="w-10 h-10 rounded-xl bg-[#11998e]/10 border border-[#11998e]/20 flex items-center justify-center text-[#11998e] flex-shrink-0">
                     {item.icon}
                   </div>
                   <div>
@@ -119,7 +119,7 @@ export default function ContactPage() {
                             ? "noopener noreferrer"
                             : undefined
                         }
-                        className="text-sm text-white hover:text-[#7c3aed] transition-colors font-medium"
+                        className="text-sm text-white hover:text-[#11998e] transition-colors font-medium"
                       >
                         {item.value}
                       </a>
@@ -133,7 +133,7 @@ export default function ContactPage() {
                 {item.copyable && (
                   <button
                     onClick={() => handleCopy(item.value, item.label)}
-                    className="w-8 h-8 rounded-lg bg-white/[0.04] border border-white/[0.06] flex items-center justify-center text-[#9ca3af] hover:text-[#7c3aed] hover:border-[#7c3aed]/40 transition-all"
+                    className="w-8 h-8 rounded-lg bg-white/[0.04] border border-white/[0.06] flex items-center justify-center text-[#9ca3af] hover:text-[#11998e] hover:border-[#11998e]/40 transition-all"
                     aria-label={`Copy ${item.label}`}
                   >
                     {copied === item.label ? (
@@ -152,7 +152,7 @@ export default function ContactPage() {
         <motion.div variants={fadeInUp} className="md:col-span-2">
           <GlassCard className="p-6 h-full flex flex-col" hover={false}>
             <h3 className="text-lg font-semibold text-white mb-2 flex items-center gap-2">
-              <Send size={16} className="text-[#7c3aed]" />
+              <Send size={16} className="text-[#11998e]" />
               Get in Touch
             </h3>
             <p className="text-[#9ca3af] text-sm leading-relaxed mb-6">
@@ -162,7 +162,7 @@ export default function ContactPage() {
             </p>
 
             <div className="mt-auto space-y-4">
-              <div className="p-4 rounded-xl bg-gradient-to-br from-[#7c3aed]/10 to-[#22c55e]/5 border border-[#7c3aed]/10">
+              <div className="p-4 rounded-xl bg-gradient-to-br from-[#085d56]/10 to-[#22c55e]/5 border border-[#11998e]/10">
                 <p className="text-xs text-[#9ca3af] uppercase tracking-wider font-medium mb-1">
                   Response Time
                 </p>
@@ -182,7 +182,7 @@ export default function ContactPage() {
 
               <a
                 href="mailto:lthamundhra5@gmail.com"
-                className="w-full inline-flex items-center justify-center gap-2 px-6 py-2.5 rounded-lg bg-[#7c3aed] text-white text-sm font-medium transition-all hover:bg-[#6d28d9] hover:shadow-lg hover:shadow-[#7c3aed]/25 hover:-translate-y-0.5 active:translate-y-0"
+                className="w-full inline-flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl bg-gradient-to-br from-[#085d56] to-[#00998c] text-white text-sm font-medium transition-all hover:from-[#074f49] hover:to-[#007a70] hover:shadow-lg hover:shadow-[#11998e]/25 hover:-translate-y-0.5 active:translate-y-0"
               >
                 <Mail size={16} />
                 Send Email

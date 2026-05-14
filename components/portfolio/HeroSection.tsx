@@ -24,7 +24,7 @@ export default function HeroSection() {
         </motion.p>
 
         <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold leading-tight">
-          <span className="bg-gradient-to-r from-[#7c3aed] via-[#a855f7] to-[#22c55e] bg-clip-text text-transparent">
+          <span className="bg-gradient-to-r from-[#085d56] via-[#11998e] to-[#22c55e] bg-clip-text text-transparent">
             Tarun Mundhra
           </span>
         </h1>
@@ -47,13 +47,13 @@ export default function HeroSection() {
         >
           <button
             onClick={() => setCurrentPage("projects")}
-            className="inline-flex items-center gap-2 px-6 py-2.5 rounded-lg bg-[#7c3aed] text-white text-sm font-medium transition-all hover:bg-[#6d28d9] hover:shadow-lg hover:shadow-[#7c3aed]/25 hover:-translate-y-0.5 active:translate-y-0"
+            className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-gradient-to-br from-[#085d56] to-[#00998c] text-white text-sm font-medium transition-all hover:from-[#074f49] hover:to-[#007a70] hover:shadow-lg hover:shadow-[#11998e]/30 hover:-translate-y-0.5 active:translate-y-0 relative overflow-hidden"
           >
             View Projects
           </button>
           <a
             href="#"
-            className="inline-flex items-center gap-2 px-6 py-2.5 rounded-lg border border-white/10 text-[#e5e7eb] text-sm font-medium transition-all hover:bg-white/5 hover:border-[#7c3aed]/50 hover:-translate-y-0.5 active:translate-y-0"
+            className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl border border-[#11998e]/40 text-[#e5e7eb] text-sm font-medium transition-all hover:bg-[#11998e]/10 hover:border-[#11998e]/70 hover:-translate-y-0.5 active:translate-y-0"
           >
             <FileDown size={16} />
             Resume

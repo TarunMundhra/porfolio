@@ -69,7 +69,7 @@ const projects: Project[] = [
   },
   {
     title: "StudyFlow",
-    emoji: "📚",
+    emoji: "�",
     description:
       "An offline-first study planning platform enabling uninterrupted usage through local persistence using IndexedDB and background synchronization with conflict-safe schedule syncing.",
     highlights: [
@@ -143,7 +143,7 @@ export default function ProjectsPage() {
                       href={link.href}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="w-8 h-8 rounded-lg bg-white/[0.04] border border-white/[0.06] flex items-center justify-center text-[#9ca3af] hover:text-[#7c3aed] hover:border-[#7c3aed]/40 transition-all"
+                      className="w-8 h-8 rounded-lg bg-white/[0.04] border border-white/[0.06] flex items-center justify-center text-[#9ca3af] hover:text-[#11998e] hover:border-[#11998e]/40 transition-all"
                       aria-label={link.label}
                     >
                       {link.label.includes("Code") ? (
@@ -168,7 +168,7 @@ export default function ProjectsPage() {
                     key={idx}
                     className="flex items-start gap-2 text-sm text-[#e5e7eb]/80"
                   >
-                    <span className="flex-shrink-0 mt-1.5 w-1.5 h-1.5 rounded-full bg-gradient-to-r from-[#7c3aed] to-[#22c55e]" />
+                    <span className="flex-shrink-0 mt-1.5 w-1.5 h-1.5 rounded-full bg-gradient-to-r from-[#085d56] to-[#22c55e]" />
                     <span>{point}</span>
                   </li>
                 ))}
