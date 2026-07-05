@@ -1,74 +1,71 @@
-# Tarun Mundhra - Portfolio
+<div align="center">
+  <img src="public/Tarun.jpeg" alt="Tarun Mundhra" width="150" height="150" style="border-radius: 50%; box-shadow: 0 0 20px rgba(17,153,142,0.5);" />
+  
+  <br />
 
-A sleek, production-ready portfolio built with Next.js and a teal-green glassmorphism aesthetic. Includes static export for Netlify, live project demos, and a recruiter-friendly layout.
+  # 🚀 Tarun Mundhra's Universe
+  
+  **Building high-performance trading systems, scalable backend architectures, and cross-platform applications.**
 
-## Highlights
+  [![Portfolio](https://img.shields.io/badge/Live_Portfolio-020617?style=for-the-badge&logo=react&logoColor=11998e)](https://tarun-mundhra.netlify.app/)
+  [![GitHub](https://img.shields.io/badge/GitHub-100000?style=for-the-badge&logo=github&logoColor=white)](https://github.com/TarunMundhra)
+  [![LinkedIn](https://img.shields.io/badge/LinkedIn-0077B5?style=for-the-badge&logo=linkedin&logoColor=white)](https://linkedin.com/in/tarun-mundhra-0a0a5629a)
 
-- Static export ready (Netlify friendly)
-- Glassmorphism cards and floating navbar
-- Fast, single-page navigation with smooth transitions
-- Project links with live demos and repos
-- Resume download and profile photo support
+  <br />
 
-## Tech Stack
+  ### [✨ Enter the Portal ✨](https://tarun-mundhra.netlify.app/)
+</div>
 
-- Next.js (App Router)
-- React
-- TypeScript
-- Tailwind CSS
-- Framer Motion
+---
 
-## Quick Start
+## 🌌 About This Repository
+This isn't just a portfolio; it's a **Next.js-powered command center** built with a mesmerizing teal-green glassmorphism aesthetic. Designed for speed, SEO, and maximum visual impact.
 
+## ⚡ Hyper-Features
+- **Blazing Fast SPA:** Seamless, fluid page transitions powered by `framer-motion`.
+- **Glassmorphism UI:** Translucent cards, floating navbars, and ambient gradients.
+- **SEO Optimized:** Next.js Image optimization, JSON-LD Schema, and semantic markup built-in.
+- **Static Export Ready:** Deploys instantly to Netlify or Vercel.
+
+## 🛠️ The Tech Engine
+| Core Framework | Styling & UI | State & Animations |
+|----------------|--------------|--------------------|
+| **Next.js 15 (App Router)** | **Tailwind CSS** | **Zustand** |
+| **React 19 & TypeScript** | **Lucide Icons** | **Framer Motion** |
+
+## 🚀 Ignition Sequence (Run Locally)
+
+Ready to boot up the warp drive?
 ```bash
+# Clone the repository
+git clone https://github.com/TarunMundhra/portfolio.git
+
+# Install dependencies
 npm install
+
+# Start the dev server
 npm run dev
 ```
+Open [http://localhost:3000](http://localhost:3000) and prepare to be wowed.
 
-Open http://localhost:3000
+## 🏗️ Build & Deploy
 
-## Build and Export
+This portfolio is configured for **Static HTML Export**, meaning it can be deployed anywhere, instantly.
 
 ```bash
+# Generate the optimized static export
 npm run build
 ```
+The `out/` directory will contain your production-ready, lightning-fast build.
 
-This generates a static export in the `out/` directory.
+## 👽 Architecture Breakdown
+- **`src/app/`**: Next.js App Router setup, layout configs, and global SEO metadata.
+- **`src/components/portfolio/`**: The core glassmorphism UI components (`HeroSection`, `GlassCard`, etc.).
+- **`src/store/`**: Zustand state management for seamless SPA client-side navigation.
+- **`public/`**: Static assets, SEO configurations (`sitemap.xml`, `robots.txt`), and the resume.
 
-## Deploy to Netlify
-
-1. Push this repo to GitHub.
-2. In Netlify, add a new site from Git.
-3. Set:
-   - Build command: `npm run build`
-   - Publish directory: `out`
-4. Deploy.
-
-The Netlify configuration is already included in `netlify.toml`.
-
-## Project Structure
-
-```
-src/
-  app/
-  components/
-  hooks/
-  lib/
-  store/
-public/
-```
-
-## Assets
-
-- Profile photo: `public/Tarun.jpeg`
-- Resume PDF: `public/Tarun-Mundhra-Resume.pdf`
-
-## Customization
-
-- Update contact details in `src/components/portfolio/ContactPage.tsx`
-- Update projects in `src/components/portfolio/ProjectsPage.tsx`
-- Update achievements in `src/components/portfolio/AboutPage.tsx`
-
-## License
-
-Personal portfolio. All rights reserved.
+---
+<div align="center">
+  <i>"Code is poetry. Architecture is art."</i><br>
+  <b>© Tarun Mundhra. All rights reserved.</b>
+</div>

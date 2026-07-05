@@ -3,6 +3,7 @@
 import { motion } from "framer-motion";
 import { useNavStore } from "@/store/useNavStore";
 import { FileDown, ChevronDown } from "lucide-react";
+import Image from "next/image";
 
 export default function HeroSection() {
   const { setCurrentPage } = useNavStore();
@@ -26,11 +27,13 @@ export default function HeroSection() {
         <div className="flex justify-center mb-6">
           <div className="p-1.5 rounded-full bg-gradient-to-br from-[#085d56] via-[#11998e] to-[#22c55e] shadow-[0_12px_40px_rgba(17,153,142,0.25)]">
             <div className="rounded-full bg-[#020617] p-1">
-              <img
+              <Image
                 src="/Tarun.jpeg"
-                alt="Tarun Mundhra"
+                alt="Tarun Mundhra - Full-Stack Developer"
+                width={128}
+                height={128}
                 className="h-28 w-28 sm:h-32 sm:w-32 rounded-full object-cover"
-                loading="eager"
+                priority
               />
             </div>
           </div>
@@ -42,15 +45,15 @@ export default function HeroSection() {
           </span>
         </h1>
 
-        <motion.p
-          className="text-[#9ca3af] text-base md:text-lg mt-4 max-w-xl mx-auto leading-relaxed"
+        <motion.h2
+          className="text-[#9ca3af] text-base md:text-lg mt-4 max-w-xl mx-auto leading-relaxed font-normal"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.4, duration: 0.6 }}
         >
           Building high-performance trading systems, scalable backend
-          architectures, and cross-platform applications.
-        </motion.p>
+          architectures, and cross-platform applications as a Full-Stack Developer.
+        </motion.h2>
 
         <motion.div
           className="flex flex-wrap items-center justify-center gap-4 mt-8"
