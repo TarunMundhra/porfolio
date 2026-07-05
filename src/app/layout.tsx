@@ -43,6 +43,9 @@ export const metadata: Metadata = {
     description:
       "Portfolio of Tarun Mundhra, a Full-Stack Developer and Software Engineer at IIT Kharagpur specializing in trading systems, scalable backend architectures, and cross-platform applications.",
   },
+  verification: {
+    google: "P2QNcU64ZI-7K9baFXnsSnFpaSASYoX4Tkgm_jA-hZU",
+  },
 };
 
 export default function RootLayout({
