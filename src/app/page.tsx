@@ -15,7 +15,9 @@ export default function Home() {
 
       <main className="relative z-10 flex-1 pt-24">
         <HeroSection />
-        <PageTransition />
+        <div id="dynamic-content-section">
+          <PageTransition />
+        </div>
       </main>
 
       <Footer />

@@ -16,6 +16,18 @@ export default function Navbar() {
   const { currentPage, setCurrentPage } = useNavStore();
   const [mobileOpen, setMobileOpen] = useState(false);
 
+  const handleNavClick = (page: Page) => {
+    setCurrentPage(page);
+    setMobileOpen(false);
+
+    setTimeout(() => {
+      document.getElementById("dynamic-content-section")?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+    }, 50);
+  };
+
   return (
     <nav className="fixed top-4 left-1/2 -translate-x-1/2 z-50 w-[calc(100%-2rem)] max-w-2xl">
       {/* Floating pill navbar */}
@@ -29,7 +41,7 @@ export default function Navbar() {
       ">
         {/* Logo */}
         <button
-          onClick={() => setCurrentPage("about")}
+          onClick={() => handleNavClick("about")}
           className="text-base font-bold tracking-tight
             bg-gradient-to-r from-[#11998e] to-[#22c55e] 
             bg-clip-text text-transparent 
@@ -43,7 +55,7 @@ export default function Navbar() {
           {navItems.map((item) => (
             <button
               key={item.page}
-              onClick={() => setCurrentPage(item.page)}
+              onClick={() => handleNavClick(item.page)}
               className={`relative px-4 py-1.5 rounded-lg text-sm font-medium 
                 transition-all duration-200
                 ${currentPage === item.page
@@ -87,10 +99,7 @@ export default function Navbar() {
             {navItems.map((item) => (
               <button
                 key={item.page}
-                onClick={() => {
-                  setCurrentPage(item.page);
-                  setMobileOpen(false);
-                }}
+                onClick={() => handleNavClick(item.page)}
                 className={`text-left px-4 py-2.5 rounded-xl text-sm font-medium 
                   transition-all
                   ${currentPage === item.page
