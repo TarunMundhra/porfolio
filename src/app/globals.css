@@ -122,5 +122,47 @@
   }
   body {
     @apply bg-background text-foreground;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+  /* Even line breaks on headings, fewer orphans in prose */
+  h1, h2, h3 {
+    text-wrap: balance;
+  }
+  p {
+    text-wrap: pretty;
+  }
+  /* Brand-tinted text selection */
+  ::selection {
+    background: rgba(34, 197, 94, 0.28);
+    color: #fff;
+  }
+  /* Visible, on-brand keyboard focus (a11y) */
+  :focus-visible {
+    outline: 2px solid rgba(17, 153, 142, 0.75);
+    outline-offset: 2px;
+    border-radius: 6px;
+  }
+}
+
+/* Ambient page background: fine grid fading toward the edges */
+.bg-grid {
+  background-image:
+    linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+  background-size: 56px 56px;
+  -webkit-mask-image: radial-gradient(ellipse 80% 60% at 50% 0%, #000 30%, transparent 75%);
+  mask-image: radial-gradient(ellipse 80% 60% at 50% 0%, #000 30%, transparent 75%);
+}
+
+/* Respect users who prefer reduced motion (a11y) — kill all decorative motion */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }

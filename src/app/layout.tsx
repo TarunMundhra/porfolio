@@ -26,6 +26,7 @@ export const metadata: Metadata = {
     "Software Engineer",
   ],
   authors: [{ name: "Tarun Mundhra" }],
+  metadataBase: new URL("https://tarunmundhra.tech"),
   icons: {
     icon: "/favicon.svg",
   },
@@ -35,7 +36,7 @@ export const metadata: Metadata = {
       "Portfolio of Tarun Mundhra, a Full-Stack Developer and Software Engineer at IIT Kharagpur specializing in trading systems, scalable backend architectures, and cross-platform applications.",
     siteName: "Tarun Mundhra",
     type: "website",
-    url: "https://tarun-mundhra.netlify.app/",
+    url: "https://tarunmundhra.tech/",
   },
   twitter: {
     card: "summary_large_image",
@@ -57,7 +58,7 @@ export default function RootLayout({
     "@context": "https://schema.org",
     "@type": "Person",
     name: "Tarun Mundhra",
-    url: "https://tarun-mundhra.netlify.app/",
+    url: "https://tarunmundhra.tech/",
     jobTitle: "Full-Stack Developer",
     alumniOf: {
       "@type": "CollegeOrUniversity",

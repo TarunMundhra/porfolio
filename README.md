@@ -7,13 +7,13 @@
   
   **Building high-performance trading systems, scalable backend architectures, and cross-platform applications.**
 
-  [![Portfolio](https://img.shields.io/badge/Live_Portfolio-020617?style=for-the-badge&logo=react&logoColor=11998e)](https://tarun-mundhra.netlify.app/)
+  [![Portfolio](https://img.shields.io/badge/Live_Portfolio-020617?style=for-the-badge&logo=react&logoColor=11998e)](https://tarunmundhra.tech)
   [![GitHub](https://img.shields.io/badge/GitHub-100000?style=for-the-badge&logo=github&logoColor=white)](https://github.com/TarunMundhra)
   [![LinkedIn](https://img.shields.io/badge/LinkedIn-0077B5?style=for-the-badge&logo=linkedin&logoColor=white)](https://linkedin.com/in/tarun-mundhra-0a0a5629a)
 
   <br />
 
-  ### [✨ Enter the Portal ✨](https://tarun-mundhra.netlify.app/)
+  ### [✨ Enter the Portal ✨](https://tarunmundhra.tech)
 </div>
 
 ---

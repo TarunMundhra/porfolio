@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://tarun-mundhra.netlify.app/sitemap.xml
+Sitemap: https://tarunmundhra.tech/sitemap.xml

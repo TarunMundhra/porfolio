@@ -19,11 +19,11 @@ export default function GlassCard({
         bg-white/[0.04] backdrop-blur-md
         border-white/[0.08]
         ${hover
-          ? `transition-all duration-300 
-             hover:-translate-y-1 hover:scale-[1.01]
+          ? `transition-[transform,border-color,background-color,box-shadow] duration-300 ease-out
+             hover:-translate-y-1
              hover:border-[#11998e]/40
              hover:bg-white/[0.07]
-             hover:shadow-[0_8px_40px_rgba(17,153,142,0.15)]`
+             hover:shadow-[0_10px_44px_rgba(17,153,142,0.18)]`
           : ""
         } ${className}`}
     >

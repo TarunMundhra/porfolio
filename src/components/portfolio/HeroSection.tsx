@@ -15,14 +15,20 @@ export default function HeroSection() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.8, ease: "easeOut" }}
       >
-        <motion.p
-          className="text-[#9ca3af] text-sm md:text-base tracking-wide uppercase mb-4"
+        <motion.div
+          className="flex justify-center mb-6"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.2, duration: 0.6 }}
         >
-          Portfolio
-        </motion.p>
+          <span className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/[0.04] border border-white/[0.08] text-xs sm:text-sm text-[#cbd5e1]">
+            <span className="relative flex h-2 w-2">
+              <span className="absolute inline-flex h-full w-full rounded-full bg-[#22c55e]/70 animate-ping" />
+              <span className="relative inline-flex h-2 w-2 rounded-full bg-[#22c55e]" />
+            </span>
+            Open to internships &amp; new projects
+          </span>
+        </motion.div>
 
         <div className="flex justify-center mb-6">
           <div className="p-1.5 rounded-full bg-gradient-to-br from-[#085d56] via-[#11998e] to-[#22c55e] shadow-[0_12px_40px_rgba(17,153,142,0.25)]">
@@ -39,10 +45,8 @@ export default function HeroSection() {
           </div>
         </div>
 
-        <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold leading-tight">
-          <span className="bg-gradient-to-r from-[#085d56] via-[#11998e] to-[#22c55e] bg-clip-text text-transparent">
-            Tarun Mundhra
-          </span>
+        <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold leading-[1.05] tracking-tight text-white">
+          Tarun Mundhra
         </h1>
 
         <motion.h2
@@ -83,10 +87,12 @@ export default function HeroSection() {
           animate={{ opacity: 1 }}
           transition={{ delay: 0.9, duration: 0.6 }}
         >
-          <ChevronDown
-            size={20}
-            className="mx-auto text-[#9ca3af] animate-bounce"
-          />
+          <motion.div
+            animate={{ y: [0, 7, 0] }}
+            transition={{ duration: 1.8, repeat: Infinity, ease: "easeInOut" }}
+          >
+            <ChevronDown size={20} className="mx-auto text-[#9ca3af]" />
+          </motion.div>
         </motion.div>
       </motion.div>
     </section>

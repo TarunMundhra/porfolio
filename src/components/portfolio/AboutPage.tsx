@@ -130,7 +130,7 @@ export default function AboutPage() {
                 </span>
                 <span className="text-[#9ca3af] text-sm">
                   CGPA:{" "}
-                  <span className="text-white font-semibold">8.13/10</span>
+                  <span className="text-white font-semibold">8.2/10</span>
                 </span>
                 <span className="text-[#9ca3af] text-sm">
                   Aug 2023 &ndash; May 2027
