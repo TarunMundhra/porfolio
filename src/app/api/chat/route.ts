@@ -28,6 +28,35 @@ const MAX_OUTPUT_BYTES = 40_000;
 
 class RequestBodyTooLargeError extends Error {}
 
+function splitContentType(value: string): string[] | undefined {
+  const parts: string[] = [];
+  let start = 0;
+  let quoted = false;
+  let escaped = false;
+  for (let index = 0; index < value.length; index += 1) {
+    const character = value[index];
+    if (escaped) {
+      escaped = false;
+      continue;
+    }
+    if (quoted && character === "\\") {
+      escaped = true;
+      continue;
+    }
+    if (character === '"') {
+      quoted = !quoted;
+      continue;
+    }
+    if (character === ";" && !quoted) {
+      parts.push(value.slice(start, index).trim());
+      start = index + 1;
+    }
+  }
+  if (quoted || escaped) return undefined;
+  parts.push(value.slice(start).trim());
+  return parts;
+}
+
 async function readRequestBody(request: Request): Promise<string> {
   if (!request.body) throw new Error("Missing request body");
   const reader = request.body.getReader();
@@ -173,8 +202,9 @@ export async function POST(request: Request): Promise<Response> {
   }
 
   const contentType = request.headers.get("content-type")?.trim() ?? "";
-  const contentTypeParts = contentType.split(";").map((part) => part.trim());
+  const contentTypeParts = splitContentType(contentType);
   const validContentType =
+    contentTypeParts !== undefined &&
     contentTypeParts[0].toLowerCase() === "application/json" &&
     contentTypeParts.slice(1).every((parameter) =>
       /^[A-Za-z0-9!#$%&'*+.^_`|~-]+=(?:"(?:[\t !#-\[\]-~]|\\[\t -~])*"|[A-Za-z0-9!#$%&'*+.^_`|~:/? -]+)$/.test(parameter),

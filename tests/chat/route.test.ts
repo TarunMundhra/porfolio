@@ -146,6 +146,14 @@ describe("POST /api/chat", () => {
     expect(response.status).toBe(200);
   });
 
+  it("accepts semicolons and escaped quotes inside quoted Content-Type parameters", async () => {
+    const response = await POST(request(
+      { question: "Tell me about the projects." },
+      { "content-type": 'application/json; charset="utf;8"' },
+    ));
+    expect(response.status).toBe(200);
+  });
+
   it("rejects a large body without a content-length header while reading the body", async () => {
     const body = new TextEncoder().encode(JSON.stringify({
       question: "Tell me about the projects.",
