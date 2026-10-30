@@ -52,7 +52,7 @@ export function createGroqStreamer(
           messages: [{ role: "user", content: prompt }],
           max_tokens: options.maxOutputTokens,
           stream: true,
-          signal,
+          signal: timeoutController.signal,
           }),
           new Promise<never>((_, reject) => {
             timeoutController.signal.addEventListener(

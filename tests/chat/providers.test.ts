@@ -81,9 +81,10 @@ describe("provider adapters", () => {
         model: "qwen-2.5-32b",
         max_tokens: 42,
         stream: true,
-        signal,
+        signal: expect.any(AbortSignal),
       }),
     );
+    expect(groqCreate.mock.calls[0][0].signal).not.toBe(signal);
   });
 
   it("maps generation failures without returning provider details", async () => {
@@ -97,5 +98,29 @@ describe("provider adapters", () => {
 
     await expect(Array.fromAsync(stream.generate("question", new AbortController().signal)))
       .rejects.toMatchObject({ code: "unavailable", message: "Generation provider unavailable" });
+  });
+
+  it("aborts a never-resolving request when the timeout expires", async () => {
+    let requestSignal: AbortSignal | undefined;
+    groqCreate.mockImplementation((request: { signal: AbortSignal }) => {
+      requestSignal = request.signal;
+      return new Promise(() => undefined);
+    });
+
+    const stream = createGroqStreamer({
+      groqApiKey: "secret-groq",
+      model: "qwen-2.5-32b",
+      maxOutputTokens: 42,
+      timeoutMs: 10,
+    });
+
+    await expect(
+      Array.fromAsync(stream.generate("question", new AbortController().signal)),
+    ).rejects.toMatchObject({
+      code: "unavailable",
+      message: "Generation provider unavailable",
+    });
+    expect(requestSignal).toBeDefined();
+    expect(requestSignal?.aborted).toBe(true);
   });
 });
