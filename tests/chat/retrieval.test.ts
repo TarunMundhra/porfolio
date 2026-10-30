@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { chunkDocument, selectRelevantChunks } from "@/lib/chat/retrieval";
+import { KNOWLEDGE_MANIFEST } from "@/data/knowledge/manifest";
+import { extractPdfText, indexKnowledge, type KnowledgeIndexDatabase } from "../../scripts/index-knowledge";
+import { readFile } from "node:fs/promises";
+import { resolve } from "node:path";
 
 describe("knowledge retrieval", () => {
   it("creates stable overlapping chunks with source metadata", () => {
@@ -17,6 +21,13 @@ describe("knowledge retrieval", () => {
     expect(chunks.every((chunk) => chunk.text.length <= 500)).toBe(true);
     expect(new Set(chunks.map((chunk) => chunk.id)).size).toBe(chunks.length);
     expect(chunks).toEqual(chunkDocument(document));
+  });
+
+  it("keeps repeated chunk content distinct by ordinal and offset", () => {
+    const text = "repeat ".repeat(80);
+    const chunks = chunkDocument({ sourceId: "about", title: "About", url: "/#about", text: `# A\n\n${text}\n# A\n\n${text}` });
+    expect(new Set(chunks.map((chunk) => chunk.id)).size).toBe(chunks.length);
+    expect(chunks.some((chunk, index) => chunks.slice(index + 1).some((other) => other.contentHash === chunk.contentHash))).toBe(true);
   });
 
   it("preserves semantic sections when splitting content", () => {
@@ -52,5 +63,64 @@ describe("knowledge retrieval", () => {
       "high",
       "middle",
     ]);
+  });
+
+  it("allowlists only approved public sources", () => {
+    expect(KNOWLEDGE_MANIFEST.map((source) => source.sourcePath)).toEqual([
+      "src/components/portfolio/HeroSection.tsx",
+      "src/components/portfolio/AboutPage.tsx",
+      "src/components/portfolio/ExperiencePage.tsx",
+      "src/components/portfolio/ProjectsPage.tsx",
+      "src/components/portfolio/ContactPage.tsx",
+      "public/Tarun-Mundhra-Resume.pdf",
+    ]);
+    expect(KNOWLEDGE_MANIFEST.every((source) => !/(transcript|node_modules|\.next|private|generated)/i.test(source.sourcePath))).toBe(true);
+  });
+
+  it("extracts text from the tracked resume PDF", async () => {
+    const pdf = await readFile(resolve(process.cwd(), "public/Tarun-Mundhra-Resume.pdf"));
+    const text = await extractPdfText(pdf);
+    expect(text.length).toBeGreaterThan(100);
+    expect(text).toMatch(/Tarun|Mundhra/i);
+  });
+
+  it("embeds every chunk and promotes only after all upserts", async () => {
+    const embeddings: string[] = [];
+    const operations: string[] = [];
+    const provider = { embed: async (text: string) => { embeddings.push(text); return [text.length]; } };
+    const database = {
+      begin: async (callback: (tx: {
+        createVersion: (id: string, model: string) => Promise<void>;
+        upsertChunk: (chunk: { text: string; sourceId: string; contentHash: string; embeddingModel: string; embedding: ReadonlyArray<number>; versionId: string; title: string; url: string; section?: string }) => Promise<void>;
+        promoteVersion: (id: string) => Promise<void>;
+      }) => Promise<void>) => callback({
+        createVersion: async () => { operations.push("create"); },
+        upsertChunk: async (chunk) => { operations.push(`upsert:${chunk.sourceId}:${chunk.contentHash}:${chunk.embedding.length}`); },
+        promoteVersion: async () => { operations.push("promote"); },
+      }),
+    };
+    const result = await indexKnowledge(provider, database as unknown as KnowledgeIndexDatabase);
+    expect(result.documentCount).toBe(KNOWLEDGE_MANIFEST.length);
+    expect(embeddings.length).toBe(result.chunkCount);
+    expect(operations.at(-1)).toBe("promote");
+    expect(operations.filter((operation) => operation === "create")).toHaveLength(1);
+  });
+
+  it("does not promote when embedding fails", async () => {
+    const operations: string[] = [];
+    const provider = { embed: async () => { throw new Error("provider failed"); } };
+    const database = {
+      begin: async (callback: (tx: {
+        createVersion: (id: string, model: string) => Promise<void>;
+        upsertChunk: () => Promise<void>;
+        promoteVersion: () => Promise<void>;
+      }) => Promise<void>) => callback({
+        createVersion: async () => { operations.push("create"); },
+        upsertChunk: async () => { operations.push("upsert"); },
+        promoteVersion: async () => { operations.push("promote"); },
+      }),
+    };
+    await expect(indexKnowledge(provider, database as unknown as KnowledgeIndexDatabase)).rejects.toThrow("provider failed");
+    expect(operations).not.toContain("promote");
   });
 });

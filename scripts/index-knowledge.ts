@@ -3,6 +3,7 @@ import { createHash, randomUUID } from "node:crypto";
 import { resolve } from "node:path";
 import postgres from "postgres";
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import { PDFParse } from "pdf-parse";
 import { KNOWLEDGE_MANIFEST } from "../src/data/knowledge/manifest";
 import { chunkDocument } from "../src/lib/chat/retrieval";
 import type { KnowledgeDocument } from "../src/lib/chat/contracts";
@@ -27,6 +28,8 @@ export interface KnowledgeIndexTransaction {
     embeddingModel: string;
     embedding: ReadonlyArray<number>;
     versionId: string;
+    chunkOrdinal: number;
+    sourceOffset: number;
   }): Promise<void>;
   promoteVersion(versionId: string): Promise<void>;
 }
@@ -34,14 +37,16 @@ export interface KnowledgeIndexTransaction {
 const root = resolve(process.cwd());
 const embeddingModel = process.env.CHAT_EMBEDDING_MODEL ?? "text-embedding-004";
 
-function extractPdfText(buffer: Buffer): string {
-  const raw = buffer.toString("latin1");
-  const matches = [...raw.matchAll(/\(([^()]*)\)\s*T[jJ]/g)].map((match) =>
-    match[1].replace(/\\([()\\])/g, "$1"),
-  );
-  const text = matches.join(" ").replace(/\s+/g, " ").trim();
-  if (!text) throw new Error("resume PDF text extraction produced no text");
-  return text;
+export async function extractPdfText(buffer: Buffer): Promise<string> {
+  const parser = new PDFParse({ data: buffer });
+  try {
+    const result = await parser.getText();
+    const text = result.text.replace(/\s+/g, " ").trim();
+    if (!text) throw new Error("resume PDF text extraction produced no text");
+    return text;
+  } finally {
+    await parser.destroy();
+  }
 }
 
 async function loadDocuments(): Promise<KnowledgeDocument[]> {
@@ -49,7 +54,7 @@ async function loadDocuments(): Promise<KnowledgeDocument[]> {
   for (const source of KNOWLEDGE_MANIFEST) {
     const path = resolve(root, source.sourcePath);
     const buffer = await readFile(path);
-    const text = source.kind === "pdf" ? extractPdfText(buffer) : buffer.toString("utf8");
+    const text = source.kind === "pdf" ? await extractPdfText(buffer) : buffer.toString("utf8");
     if (!text.trim()) throw new Error(`empty knowledge source: ${source.sourceId}`);
     documents.push({ ...source, text });
   }
@@ -85,12 +90,12 @@ function createDatabase(): KnowledgeIndexDatabase {
           upsertChunk: async (chunk) => {
             await transaction`
               INSERT INTO knowledge_chunks
-                (source_id, title, url, section, content, content_hash, embedding_model, embedding, index_version)
+                (source_id, title, url, section, content, content_hash, embedding_model, embedding, index_version, chunk_ordinal, source_offset)
               VALUES
                 (${chunk.sourceId}, ${chunk.title}, ${chunk.url}, ${chunk.section ?? null},
                  ${chunk.text}, ${chunk.contentHash}, ${chunk.embeddingModel},
-                 ${JSON.stringify(chunk.embedding)}, ${chunk.versionId})
-              ON CONFLICT (source_id, content_hash, embedding_model)
+                 ${JSON.stringify(chunk.embedding)}, ${chunk.versionId}, ${chunk.chunkOrdinal}, ${chunk.sourceOffset})
+              ON CONFLICT (source_id, chunk_ordinal, source_offset, embedding_model)
               DO UPDATE SET title = EXCLUDED.title, url = EXCLUDED.url, section = EXCLUDED.section,
                 content = EXCLUDED.content, embedding = EXCLUDED.embedding, index_version = EXCLUDED.index_version
             `;
@@ -121,6 +126,8 @@ export async function indexKnowledge(
         embeddingModel,
         embedding: await provider.embed(chunk.text),
         versionId,
+        chunkOrdinal: chunk.chunkOrdinal ?? 0,
+        sourceOffset: chunk.sourceOffset ?? 0,
       });
     }
     await transaction.promoteVersion(versionId);

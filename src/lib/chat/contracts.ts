@@ -17,6 +17,8 @@ export interface RetrievedChunk extends Citation {
   contentHash?: string;
   embeddingModel?: string;
   sourcePath?: string;
+  chunkOrdinal?: number;
+  sourceOffset?: number;
 }
 
 export type StreamEvent =

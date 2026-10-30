@@ -39,9 +39,9 @@ function splitSections(text: string, defaultSection: string): Array<{ section: s
   return sections;
 }
 
-function splitBlock(text: string): string[] {
-  if (text.length <= CHUNK_MAX_CHARACTERS) return [text];
-  const chunks: string[] = [];
+function splitBlock(text: string): Array<{ text: string; offset: number }> {
+  if (text.length <= CHUNK_MAX_CHARACTERS) return [{ text, offset: 0 }];
+  const chunks: Array<{ text: string; offset: number }> = [];
   let start = 0;
   while (start < text.length) {
     let end = Math.min(start + CHUNK_MAX_CHARACTERS, text.length);
@@ -49,7 +49,7 @@ function splitBlock(text: string): string[] {
       const boundary = text.lastIndexOf(" ", end);
       if (boundary > start + 100) end = boundary;
     }
-    chunks.push(text.slice(start, end).trim());
+    chunks.push({ text: text.slice(start, end).trim(), offset: start });
     if (end >= text.length) break;
     start = Math.max(start + 1, end - CHUNK_OVERLAP_CHARACTERS);
   }
@@ -59,11 +59,13 @@ function splitBlock(text: string): string[] {
 export function chunkDocument(document: KnowledgeDocument): RetrievedChunk[] {
   const chunks: RetrievedChunk[] = [];
   for (const section of splitSections(document.text, document.section ?? document.title)) {
-    for (const text of splitBlock(section.text)) {
+    for (const part of splitBlock(section.text)) {
+      const text = part.text;
       const contentHash = createHash("sha256").update(text, "utf8").digest("hex");
+      const chunkOrdinal = chunks.length;
       chunks.push({
         id: createHash("sha256")
-          .update(`${document.sourceId}\n${section.section}\n${contentHash}`, "utf8")
+          .update(`${document.sourceId}\n${section.section}\n${part.offset}\n${chunkOrdinal}\n${contentHash}`, "utf8")
           .digest("hex"),
         sourceId: document.sourceId,
         title: document.title,
@@ -73,6 +75,8 @@ export function chunkDocument(document: KnowledgeDocument): RetrievedChunk[] {
         similarity: 0,
         contentHash,
         sourcePath: document.sourcePath,
+        chunkOrdinal,
+        sourceOffset: part.offset,
       });
     }
   }
