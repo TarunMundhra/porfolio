@@ -143,17 +143,26 @@ export async function indexKnowledge(
   return { versionId, documentCount: documents.length, chunkCount: chunks.length };
 }
 
+export async function runIndexCommand(
+  providerFactory: () => EmbeddingProvider = createGeminiProvider,
+  databaseFactory: () => KnowledgeIndexDatabase = createDatabase,
+): Promise<{ versionId: string; documentCount: number; chunkCount: number }> {
+  let database: KnowledgeIndexDatabase | undefined;
+  try {
+    database = databaseFactory();
+    return await indexKnowledge(providerFactory(), database);
+  } finally {
+    await database?.close();
+  }
+}
+
 if (process.argv[1]?.endsWith("index-knowledge.ts")) {
-  const database = createDatabase();
-  indexKnowledge(createGeminiProvider(), database)
+  runIndexCommand()
     .then(({ versionId, documentCount, chunkCount }) => {
       console.log(`Knowledge index promoted: ${versionId}; sources=${documentCount}; chunks=${chunkCount}`);
     })
     .catch((error: unknown) => {
       console.error(`Knowledge index failed: ${error instanceof Error ? error.message : "unknown error"}`);
       process.exitCode = 1;
-    })
-    .finally(async () => {
-      await database.close();
     });
 }

@@ -1,7 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { chunkDocument, selectRelevantChunks } from "@/lib/chat/retrieval";
 import { KNOWLEDGE_MANIFEST } from "@/data/knowledge/manifest";
-import { extractPdfText, indexKnowledge, type KnowledgeIndexDatabase } from "../../scripts/index-knowledge";
+import {
+  extractPdfText,
+  indexKnowledge,
+  runIndexCommand,
+  type KnowledgeIndexDatabase,
+} from "../../scripts/index-knowledge";
 import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 
@@ -147,5 +152,25 @@ describe("knowledge retrieval", () => {
     };
     await expect(indexKnowledge(provider, database as unknown as KnowledgeIndexDatabase)).rejects.toThrow("provider failed");
     expect(operations).not.toContain("promote");
+  });
+
+  it("closes the database when provider setup fails", async () => {
+    let closed = false;
+    const database = {
+      begin: async () => undefined,
+      close: async () => {
+        closed = true;
+      },
+    };
+
+    await expect(
+      runIndexCommand(
+        () => {
+          throw new Error("missing Gemini key");
+        },
+        () => database as unknown as KnowledgeIndexDatabase,
+      ),
+    ).rejects.toThrow("missing Gemini key");
+    expect(closed).toBe(true);
   });
 });
