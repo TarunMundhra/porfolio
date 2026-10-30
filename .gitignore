@@ -2,6 +2,7 @@
 node_modules/
 .worktrees/
 graphify-out/
+knowledge-index/
 
 # build output
 .next/
