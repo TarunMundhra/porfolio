@@ -116,6 +116,7 @@ export function createChatDatabase(sql: Query, dbOptions: ChatDatabaseOptions = 
           FROM chat_conversations c
           LEFT JOIN chat_messages m ON m.conversation_id = c.id
           WHERE c.id = ${conversationId}
+            AND c.expires_at > now()
           GROUP BY c.id
         `;
         const row = rows[0];

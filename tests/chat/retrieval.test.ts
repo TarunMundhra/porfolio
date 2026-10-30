@@ -154,6 +154,39 @@ describe("knowledge retrieval", () => {
     expect(operations).not.toContain("promote");
   });
 
+  it("upserts every mutable citation and embedding field when a chunk changes", async () => {
+    const statements: string[] = [];
+    const database = {
+      begin: async (callback: (tx: {
+        createVersion: (id: string, model: string) => Promise<void>;
+        upsertChunk: (chunk: { text: string; sourceId: string; contentHash: string; embeddingModel: string; embedding: ReadonlyArray<number>; versionId: string; title: string; url: string; section?: string; sourcePath?: string; chunkOrdinal?: number; sourceOffset?: number }) => Promise<void>;
+        promoteVersion: (id: string) => Promise<void>;
+      }) => Promise<void>) => callback({
+        createVersion: async () => undefined,
+        upsertChunk: async (chunk) => {
+          statements.push(JSON.stringify(chunk));
+        },
+        promoteVersion: async () => undefined,
+      }),
+    };
+    await indexKnowledge(
+      { embed: async () => [1, 2] },
+      database as unknown as KnowledgeIndexDatabase,
+    );
+    const chunk = JSON.parse(statements[0] ?? "{}") as Record<string, unknown>;
+    expect(chunk).toMatchObject({
+      sourceId: expect.any(String),
+      sourcePath: expect.any(String),
+      contentHash: expect.any(String),
+      embeddingModel: expect.any(String),
+      chunkOrdinal: expect.any(Number),
+      sourceOffset: expect.any(Number),
+      title: expect.any(String),
+      url: expect.any(String),
+      section: expect.any(String),
+    });
+  });
+
   it("closes the database when provider setup fails", async () => {
     let closed = false;
     const database = {

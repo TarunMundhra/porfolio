@@ -55,6 +55,8 @@ CREATE TABLE IF NOT EXISTS chat_events (
 );
 
 CREATE INDEX IF NOT EXISTS chat_index_versions_active_idx ON chat_index_versions (status) WHERE status = 'active';
+CREATE UNIQUE INDEX IF NOT EXISTS chat_index_versions_one_active_idx
+  ON chat_index_versions (status) WHERE status = 'active';
 CREATE INDEX IF NOT EXISTS chat_chunks_source_idx ON chat_chunks (source_id);
 CREATE INDEX IF NOT EXISTS chat_chunks_similarity_idx ON chat_chunks USING hnsw (embedding vector_cosine_ops);
 CREATE INDEX IF NOT EXISTS chat_conversations_retention_idx ON chat_conversations (expires_at);
@@ -62,3 +64,5 @@ CREATE INDEX IF NOT EXISTS chat_conversations_retention_idx ON chat_conversation
 CREATE OR REPLACE FUNCTION purge_expired_chat_data() RETURNS void LANGUAGE sql AS $$
   DELETE FROM chat_conversations WHERE expires_at <= now();
 $$;
+
+-- Schedule purge_expired_chat_data() with the managed Postgres provider's scheduler.

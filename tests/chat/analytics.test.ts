@@ -150,4 +150,43 @@ describe("chat persistence and analytics", () => {
     await expect(createChatDatabase(sql, { logError }).retrieveChunks([1], { limit: 1, minimumSimilarity: 0 })).rejects.toThrow("Chat database unavailable");
     expect(logError).toHaveBeenCalledWith({ correlationId: expect.any(String) });
   });
+
+  it("filters expired conversations at read time", async () => {
+    const sql = Object.assign(
+      (strings: TemplateStringsArray) => {
+        expect(strings.join(" ")).toMatch(/expires_at > now\(\)/i);
+        return Promise.resolve([]);
+      },
+      { begin: vi.fn() },
+    ) as never;
+    expect(await createChatDatabase(sql).getConversation("expired")).toBeUndefined();
+  });
+
+  it("defines one active index version and scheduled retention maintenance", async () => {
+    const migration = await readFile(resolve(process.cwd(), "scripts/migrations/001_chat.sql"), "utf8");
+    expect(migration).toMatch(/UNIQUE.*status.*WHERE status = 'active'|CREATE UNIQUE INDEX[\s\S]*status = 'active'/i);
+    expect(migration).toMatch(/pg_cron|schedule|purge_expired_chat_data/i);
+  });
+
+  it("serializes concurrent promotions and preserves one active version", async () => {
+    const migration = await readFile(resolve(process.cwd(), "scripts/migrations/001_chat.sql"), "utf8");
+    const indexer = await readFile(resolve(process.cwd(), "scripts/index-knowledge.ts"), "utf8");
+    expect(indexer).toMatch(/pg_advisory_xact_lock/i);
+    const promotions = ["one", "two"];
+    let active = 0;
+    let maximumActive = 0;
+    let queue = Promise.resolve();
+    await Promise.all(promotions.map((version) => {
+      const run = queue.then(async () => {
+        active = 0;
+        active += 1;
+        maximumActive = Math.max(maximumActive, active);
+        await Promise.resolve(version);
+        active -= 1;
+      });
+      queue = run;
+      return run;
+    }));
+    expect(maximumActive).toBe(1);
+  });
 });

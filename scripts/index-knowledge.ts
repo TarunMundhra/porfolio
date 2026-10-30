@@ -98,13 +98,23 @@ export function createDatabase(): KnowledgeIndexDatabase {
                  ${chunk.sourceId}, ${chunk.sourcePath ?? null}, ${chunk.title}, ${chunk.url}, ${chunk.section ?? null},
                  ${chunk.text}, ${chunk.contentHash}, ${chunk.embeddingModel},
                  ${JSON.stringify(chunk.embedding)}, ${chunk.chunkOrdinal}, ${chunk.sourceOffset})
-              ON CONFLICT (id) DO UPDATE SET title = EXCLUDED.title, url = EXCLUDED.url, section = EXCLUDED.section,
-                text = EXCLUDED.text, embedding = EXCLUDED.embedding, version_id = EXCLUDED.version_id
+              ON CONFLICT (id) DO UPDATE SET
+                version_id = EXCLUDED.version_id, source_id = EXCLUDED.source_id,
+                source_path = EXCLUDED.source_path, title = EXCLUDED.title,
+                url = EXCLUDED.url, section = EXCLUDED.section, text = EXCLUDED.text,
+                content_hash = EXCLUDED.content_hash, embedding_model = EXCLUDED.embedding_model,
+                embedding = EXCLUDED.embedding, chunk_ordinal = EXCLUDED.chunk_ordinal,
+                source_offset = EXCLUDED.source_offset
             `;
           },
           promoteVersion: async (versionId) => {
-            await transaction`UPDATE chat_index_versions SET status = 'retired' WHERE status = 'active'`;
-            await transaction`UPDATE chat_index_versions SET status = 'active', activated_at = now() WHERE id = ${versionId}`;
+            try {
+              await transaction`SELECT pg_advisory_xact_lock(hashtext('chat_index_promotion'))`;
+              await transaction`UPDATE chat_index_versions SET status = 'retired' WHERE status = 'active'`;
+              await transaction`UPDATE chat_index_versions SET status = 'active', activated_at = now() WHERE id = ${versionId}`;
+            } catch {
+              throw new Error("Knowledge index promotion failed");
+            }
           },
         });
       });
