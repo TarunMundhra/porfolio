@@ -14,6 +14,7 @@ export interface EmbeddingProvider {
 
 export interface KnowledgeIndexDatabase {
   begin<T>(callback: (transaction: KnowledgeIndexTransaction) => Promise<T>): Promise<T>;
+  close(): Promise<void>;
 }
 
 export interface KnowledgeIndexTransaction {
@@ -73,7 +74,7 @@ function createGeminiProvider(): EmbeddingProvider {
   };
 }
 
-function createDatabase(): KnowledgeIndexDatabase {
+export function createDatabase(): KnowledgeIndexDatabase {
   const databaseUrl = process.env.DATABASE_URL;
   if (!databaseUrl) throw new Error("DATABASE_URL is required");
   const sql = postgres(databaseUrl);
@@ -107,6 +108,9 @@ function createDatabase(): KnowledgeIndexDatabase {
         });
       });
     },
+    async close() {
+      await sql.end();
+    },
   };
 }
 
@@ -117,14 +121,18 @@ export async function indexKnowledge(
   const documents = await loadDocuments();
   const versionId = randomUUID();
   const chunks = documents.flatMap((document) => chunkDocument(document));
+  const embeddings = await Promise.all(chunks.map(async (chunk) => ({
+    chunk,
+    embedding: await provider.embed(chunk.text),
+  })));
   await database.begin(async (transaction) => {
     await transaction.createVersion(versionId, embeddingModel);
-    for (const chunk of chunks) {
+    for (const { chunk, embedding } of embeddings) {
       await transaction.upsertChunk({
         ...chunk,
         contentHash: chunk.contentHash ?? createHash("sha256").update(chunk.text).digest("hex"),
         embeddingModel,
-        embedding: await provider.embed(chunk.text),
+        embedding,
         versionId,
         chunkOrdinal: chunk.chunkOrdinal ?? 0,
         sourceOffset: chunk.sourceOffset ?? 0,
@@ -136,12 +144,16 @@ export async function indexKnowledge(
 }
 
 if (process.argv[1]?.endsWith("index-knowledge.ts")) {
-  indexKnowledge()
+  const database = createDatabase();
+  indexKnowledge(createGeminiProvider(), database)
     .then(({ versionId, documentCount, chunkCount }) => {
       console.log(`Knowledge index promoted: ${versionId}; sources=${documentCount}; chunks=${chunkCount}`);
     })
     .catch((error: unknown) => {
       console.error(`Knowledge index failed: ${error instanceof Error ? error.message : "unknown error"}`);
       process.exitCode = 1;
+    })
+    .finally(async () => {
+      await database.close();
     });
 }

@@ -106,6 +106,31 @@ describe("knowledge retrieval", () => {
     expect(operations.filter((operation) => operation === "create")).toHaveLength(1);
   });
 
+  it("generates all embeddings before opening the database transaction", async () => {
+    let transactionOpen = false;
+    const provider = {
+      embed: async () => {
+        expect(transactionOpen).toBe(false);
+        return [1];
+      },
+    };
+    const database = {
+      begin: async (callback: (tx: {
+        createVersion: (id: string, model: string) => Promise<void>;
+        upsertChunk: () => Promise<void>;
+        promoteVersion: () => Promise<void>;
+      }) => Promise<void>) => {
+        transactionOpen = true;
+        return callback({
+          createVersion: async () => undefined,
+          upsertChunk: async () => undefined,
+          promoteVersion: async () => undefined,
+        }).finally(() => { transactionOpen = false; });
+      },
+    };
+    await indexKnowledge(provider, database as unknown as KnowledgeIndexDatabase);
+  });
+
   it("does not promote when embedding fails", async () => {
     const operations: string[] = [];
     const provider = { embed: async () => { throw new Error("provider failed"); } };
