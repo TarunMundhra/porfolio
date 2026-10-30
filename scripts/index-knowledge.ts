@@ -95,7 +95,7 @@ function createDatabase(): KnowledgeIndexDatabase {
                 (${chunk.sourceId}, ${chunk.title}, ${chunk.url}, ${chunk.section ?? null},
                  ${chunk.text}, ${chunk.contentHash}, ${chunk.embeddingModel},
                  ${JSON.stringify(chunk.embedding)}, ${chunk.versionId}, ${chunk.chunkOrdinal}, ${chunk.sourceOffset})
-              ON CONFLICT (source_id, chunk_ordinal, source_offset, embedding_model)
+              ON CONFLICT (source_id, content_hash, embedding_model, chunk_ordinal, source_offset)
               DO UPDATE SET title = EXCLUDED.title, url = EXCLUDED.url, section = EXCLUDED.section,
                 content = EXCLUDED.content, embedding = EXCLUDED.embedding, index_version = EXCLUDED.index_version
             `;
