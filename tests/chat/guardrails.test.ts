@@ -44,9 +44,26 @@ describe("chat guardrails", () => {
 
   it("accepts concise answers with citations", () => {
     expect(
-      validateAnswer("Tarun built Project A. [project-a]", [
+      validateAnswer("Tarun built Project A. [1]", [
         { id: "project-a", title: "Project A", text: "Tarun built Project A.", url: "/projects#a" },
       ]),
-    ).toEqual({ kind: "accept", answer: "Tarun built Project A. [project-a]" });
+    ).toEqual({ kind: "accept", answer: "Tarun built Project A. [1]" });
+  });
+
+  it("uses numbered prompt evidence as model citations", () => {
+    const evidence = [
+      { id: "project-a", title: "Project A", text: "Tarun built Project A.", url: "/projects#a" },
+      { id: "project-b", title: "Project B", text: "Project B uses TypeScript.", url: "/projects#b" },
+    ];
+    const prompt = buildGroundedPrompt("Which projects did Tarun build?", evidence);
+
+    expect(prompt).toContain("[1] Project A");
+    expect(prompt).toContain("[2] Project B");
+    expect(validateAnswer("Tarun built Project A. [1]", evidence)).toEqual({
+      kind: "accept",
+      answer: "Tarun built Project A. [1]",
+    });
+    expect(validateAnswer("Tarun built Project A. [3]", evidence).kind).toBe("fallback");
+    expect(validateAnswer("Tarun built Project A. [project-a]", evidence).kind).toBe("fallback");
   });
 });
