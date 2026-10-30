@@ -19,6 +19,7 @@ const state = vi.hoisted(() => ({
   generate: vi.fn(),
   persistConversation: vi.fn().mockResolvedValue(undefined),
   abort: vi.fn(),
+  retrieve: vi.fn(),
 }));
 
 vi.mock("@/lib/chat/config", () => ({
@@ -52,7 +53,7 @@ vi.mock("@/lib/chat/providers/groq", () => ({
 
 vi.mock("@/lib/chat/db", () => ({
   createChatDatabase: () => ({
-    retrieveChunks: vi.fn(async () => state.chunks),
+    retrieveChunks: (...args: unknown[]) => state.retrieve(...args),
     persistConversation: state.persistConversation,
   }),
 }));
@@ -110,6 +111,7 @@ describe("POST /api/chat", () => {
     });
     state.persistConversation.mockReset().mockResolvedValue(undefined);
     state.abort.mockReset();
+    state.retrieve.mockReset().mockImplementation(async () => state.chunks);
   });
 
   it("streams start, tokens, citations, and done for valid same-origin input", async () => {
@@ -118,8 +120,74 @@ describe("POST /api/chat", () => {
 
     expect(response.status).toBe(200);
     expect(response.headers.get("content-type")).toContain("application/x-ndjson");
-    expect(output.map((event) => event.type)).toEqual(["start", "token", "citation", "done"]);
+    expect(output.map((event) => event.type)).toEqual(["start", "token", "token", "citation", "done"]);
     expect(output).not.toContainEqual(expect.objectContaining({ value: "gemini-secret" }));
+  });
+
+  it.each(["application/jsonfoo", "application/json-malicious", "text/json"])(
+    "rejects non-exact JSON content type %s",
+    async (contentType) => {
+      const response = await POST(request(
+        { question: "Tell me about the projects." },
+        { "content-type": contentType },
+      ));
+      expect(response.status).toBe(415);
+      expect(await events(response)).toEqual([
+        expect.objectContaining({ type: "error", code: "invalid_request" }),
+      ]);
+    },
+  );
+
+  it("emits the first Groq delta before the iterator completes", async () => {
+    let finish!: () => void;
+    const completion = new Promise<void>((resolve) => { finish = resolve; });
+    state.generate.mockImplementation(() => ({
+      next: vi.fn()
+        .mockResolvedValueOnce({ done: false, value: "Tarun built it." })
+        .mockImplementationOnce(() => completion.then(() => ({ done: true, value: undefined }))),
+      return: vi.fn().mockResolvedValue({ done: true, value: undefined }),
+      [Symbol.asyncIterator]() { return this; },
+    }));
+    const response = await POST(request({ question: "Tell me about the projects." }));
+    const reader = response.body!.getReader();
+    await reader.read();
+    const first = await Promise.race([
+      reader.read(),
+      new Promise<never>((_, reject) => setTimeout(() => reject(new Error("first token delayed")), 100)),
+    ]);
+    expect(new TextDecoder().decode(first.value)).toContain('"type":"token"');
+    finish();
+    await reader.cancel();
+  });
+
+  it("releases the in-flight slot when post-acquire setup throws", async () => {
+    state.retrieve.mockResolvedValue(undefined);
+    const responses = [];
+    for (let index = 0; index < 17; index += 1) {
+      responses.push(await POST(request(
+        { question: "Tell me about the projects." },
+        { "x-forwarded-for": `setup-error-${index}` },
+      )));
+    }
+    expect(responses.every((item) => item.status !== 429)).toBe(true);
+    for (const item of responses) await item.arrayBuffer();
+  });
+
+  it("logs correlation ID, stage, and code without raw provider details", async () => {
+    const log = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    state.generate.mockImplementation(async function* () {
+      throw new Error("raw-groq-provider-secret");
+    });
+    const output = await events(await POST(request(
+      { question: "Tell me about the projects." },
+      { "x-forwarded-for": "logging-client" },
+    )));
+    const requestId = String(output[0].requestId);
+    expect(log).toHaveBeenCalledWith(expect.stringContaining(requestId));
+    expect(log.mock.calls.flat().join(" ")).toContain('"stage"');
+    expect(log.mock.calls.flat().join(" ")).toContain('"code"');
+    expect(log.mock.calls.flat().join(" ")).not.toContain("raw-groq-provider-secret");
+    log.mockRestore();
   });
 
   it.each([

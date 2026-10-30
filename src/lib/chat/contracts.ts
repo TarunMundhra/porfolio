@@ -30,6 +30,7 @@ export type StreamEvent =
       type: "error";
       code: "invalid_request" | "rate_limited" | "unavailable" | "refused" | "internal";
       message: string;
+      correlationId?: string;
     };
 
 export interface KnowledgeDocument {

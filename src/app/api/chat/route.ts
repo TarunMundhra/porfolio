@@ -15,6 +15,7 @@ import {
   getSecurityHeaders,
   isAllowedOrigin,
   parseChatRequest,
+  redactForAnalytics,
 } from "@/lib/chat/security";
 import { createGeminiEmbedder, type GeminiEmbedder } from "@/lib/chat/providers/gemini";
 import { createGroqStreamer, type GroqStreamer } from "@/lib/chat/providers/groq";
@@ -83,7 +84,9 @@ function response(
 function errorResponse(
   code: Extract<StreamEvent, { type: "error" }>["code"],
   status: number,
+  correlationId?: string,
 ): Response {
+  if (correlationId) logFailure(correlationId, "request", code);
   return response(eventBody({
     type: "error",
     code,
@@ -97,7 +100,16 @@ function errorResponse(
             : code === "unavailable"
               ? "Provider unavailable"
               : "Unable to complete response",
+    ...(correlationId ? { correlationId } : {}),
   }), status);
+}
+
+function logFailure(correlationId: string, stage: string, code: string): void {
+  try {
+    console.error(JSON.stringify({ correlationId, stage, code }));
+  } catch {
+    // Logging must never affect the response.
+  }
 }
 
 function clientKey(request: Request): string {
@@ -124,53 +136,61 @@ export async function POST(request: Request): Promise<Response> {
   try {
     current = getRuntime();
   } catch {
-    return errorResponse("internal", 500);
+    logFailure(correlationId, "runtime", "internal");
+    return errorResponse("internal", 500, correlationId);
   }
 
-  if (!request.headers.get("content-type")?.toLowerCase().startsWith("application/json")) {
-    return errorResponse("invalid_request", 415);
+  const contentType = request.headers.get("content-type")?.trim() ?? "";
+  const contentTypeParts = contentType.split(";").map((part) => part.trim());
+  const validContentType =
+    contentTypeParts[0].toLowerCase() === "application/json" &&
+    contentTypeParts.slice(1).every((parameter) =>
+      /^[A-Za-z0-9!#$%&'*+.^_`|~-]+=[A-Za-z0-9!#$%&'*+.^_`|~:/? -]+$/.test(parameter),
+    );
+  if (!validContentType) {
+    return errorResponse("invalid_request", 415, correlationId);
   }
   if (!isAllowedOrigin(request.headers.get("origin"), current.config.allowedOrigins)) {
-    return errorResponse("invalid_request", 403);
+    return errorResponse("invalid_request", 403, correlationId);
   }
 
   const contentLength = request.headers.get("content-length");
   if (contentLength !== null && (!/^\d+$/.test(contentLength) || Number(contentLength) > MAX_BODY_BYTES)) {
-    return errorResponse("invalid_request", 413);
+    return errorResponse("invalid_request", 413, correlationId);
   }
 
   let input: ReturnType<typeof parseChatRequest>;
   try {
     const body = await request.text();
     if (new TextEncoder().encode(body).byteLength > MAX_BODY_BYTES) {
-      return errorResponse("invalid_request", 413);
+      return errorResponse("invalid_request", 413, correlationId);
     }
     input = parseChatRequest(JSON.parse(body));
     if (input.question.length > current.config.maxInputChars) {
-      return errorResponse("invalid_request", 413);
+      return errorResponse("invalid_request", 413, correlationId);
     }
   } catch {
-    return errorResponse("invalid_request", 400);
+    return errorResponse("invalid_request", 400, correlationId);
   }
 
   if (!current.rateLimiter.allow(clientKey(request))) {
-    return errorResponse("rate_limited", 429);
+    return errorResponse("rate_limited", 429, correlationId);
   }
   if (!current.inFlight.tryAcquire()) {
-    return errorResponse("rate_limited", 429);
+    return errorResponse("rate_limited", 429, correlationId);
   }
 
   const assessment = assessQuestion(input.question);
   if (assessment.kind === "invalid") {
     current.inFlight.release();
-    return errorResponse("invalid_request", 400);
+    return errorResponse("invalid_request", 400, correlationId);
   }
   if (assessment.kind === "refuse") {
     current.inFlight.release();
     const body = new ReadableStream<Uint8Array>({
       start(controller) {
         controller.enqueue(encoder.encode(`${JSON.stringify({ type: "start", requestId: correlationId })}\n`));
-        controller.enqueue(encoder.encode(`${JSON.stringify({ type: "error", code: "refused", message: "I can't help with that request." })}\n`));
+        controller.enqueue(encoder.encode(`${JSON.stringify({ type: "error", code: "refused", message: "I can't help with that request.", correlationId })}\n`));
         controller.close();
       },
     });
@@ -178,7 +198,7 @@ export async function POST(request: Request): Promise<Response> {
   }
   if (assessment.kind !== "portfolio") {
     current.inFlight.release();
-    return errorResponse("refused", 200);
+    return errorResponse("refused", 200, correlationId);
   }
 
   let chunks;
@@ -190,15 +210,35 @@ export async function POST(request: Request): Promise<Response> {
     });
   } catch {
     current.inFlight.release();
-    return errorResponse("unavailable", 503);
+    logFailure(correlationId, "retrieval", "unavailable");
+    return errorResponse("unavailable", 503, correlationId);
   }
 
+  const release = (() => {
+    let released = false;
+    return () => {
+      if (!released) {
+        released = true;
+        current.inFlight.release();
+      }
+    };
+  })();
+  let citations: Citation[];
+  let prompt: string;
+  try {
+    if (!Array.isArray(chunks)) throw new Error("invalid retrieval result");
+    citations = citationsFor(chunks);
+    prompt = buildGroundedPrompt(input.question, chunks);
+  } catch {
+    logFailure(correlationId, "stream_setup", "internal");
+    release();
+    return errorResponse("internal", 500, correlationId);
+  }
   const requestController = new AbortController();
-  const citations = citationsFor(chunks);
-  const prompt = buildGroundedPrompt(input.question, chunks);
-  const release = () => current.inFlight.release();
   let iterator: AsyncIterator<string> | undefined;
   let finished = false;
+  let assembled = "";
+  let started = false;
   const body = new ReadableStream<Uint8Array>({
     start(controller) {
       controller.enqueue(encoder.encode(`${JSON.stringify({ type: "start", requestId: correlationId })}\n`));
@@ -206,34 +246,43 @@ export async function POST(request: Request): Promise<Response> {
     async pull(controller) {
       if (finished) return;
       try {
-        const answerParts: string[] = [];
-        if (chunks.length) {
-          iterator = current.streamer.generate(prompt, requestController.signal)[Symbol.asyncIterator]();
-          while (true) {
-            const next = await iterator.next();
-            if (next.done) break;
-            answerParts.push(next.value);
+        if (!chunks.length) {
+          if (!started) {
+            started = true;
+            assembled = "I don't have that information.";
+            controller.enqueue(encoder.encode(`${JSON.stringify({ type: "token", value: assembled })}\n`));
           }
-        } else {
-          answerParts.push("I don't have that information.");
-        }
-        const validated = chunks.length
-          ? validateAnswer(answerParts.join(""), chunks)
-          : { kind: "accept" as const, answer: answerParts[0] };
-        if (validated.kind === "fallback" && chunks.length) {
-          finished = true;
-          controller.enqueue(encoder.encode(`${JSON.stringify({ type: "error", code: "internal", message: "Unable to complete response" })}\n`));
+          controller.enqueue(encoder.encode(`${JSON.stringify({ type: "done", requestId: correlationId })}\n`));
           controller.close();
+          finished = true;
           release();
           return;
         }
-        controller.enqueue(encoder.encode(`${JSON.stringify({ type: "token", value: validated.answer })}\n`));
+        if (!iterator) {
+          iterator = current.streamer.generate(prompt, requestController.signal)[Symbol.asyncIterator]();
+        }
+        const next = await iterator.next();
+        if (!next.done) {
+          assembled += next.value;
+          controller.enqueue(encoder.encode(`${JSON.stringify({ type: "token", value: redactForAnalytics(next.value) })}\n`));
+          return;
+        }
+        const validated = validateAnswer(assembled, chunks);
+        if (validated.kind === "fallback" && chunks.length) {
+          finished = true;
+          controller.enqueue(encoder.encode(`${JSON.stringify({ type: "error", code: "internal", message: "Unable to complete response", correlationId })}\n`));
+          controller.close();
+          logFailure(correlationId, "validation", "internal");
+          release();
+          return;
+        }
         for (const citation of chunks.length ? citations : []) {
           controller.enqueue(encoder.encode(`${JSON.stringify({ type: "citation", citation })}\n`));
         }
         controller.enqueue(encoder.encode(`${JSON.stringify({ type: "done", requestId: correlationId })}\n`));
         controller.close();
         finished = true;
+        release();
         void current.analytics.recordConversation(createRedactedConversationRecord({
           conversationId: correlationId,
           ownerId: clientKey(request),
@@ -243,11 +292,11 @@ export async function POST(request: Request): Promise<Response> {
             { role: "assistant", content: validated.answer, error: false },
           ],
         }));
-        release();
       } catch {
         if (finished) return;
         finished = true;
-        controller.enqueue(encoder.encode(`${JSON.stringify({ type: "error", code: "unavailable", message: "Provider unavailable" })}\n`));
+        logFailure(correlationId, "generation", "unavailable");
+        controller.enqueue(encoder.encode(`${JSON.stringify({ type: "error", code: "unavailable", message: "Provider unavailable", correlationId })}\n`));
         controller.close();
         release();
       }
