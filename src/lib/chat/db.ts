@@ -1,7 +1,9 @@
 import type { RetrievedChunk } from "./contracts";
 import { randomUUID } from "node:crypto";
 
-type Query = (strings: TemplateStringsArray, ...values: unknown[]) => Promise<ReadonlyArray<Record<string, unknown>>>;
+type Query = ((strings: TemplateStringsArray, ...values: unknown[]) => Promise<ReadonlyArray<Record<string, unknown>>>) & {
+  begin?<T>(callback: (transaction: Query) => Promise<T>): Promise<T>;
+};
 
 export interface RedactedMessageRecord {
   role: "user" | "assistant" | "system";
@@ -35,7 +37,11 @@ export interface ChatDatabaseOptions {
 
 function databaseError(options: ChatDatabaseOptions): Error {
   const correlationId = randomUUID();
-  options.logError?.({ correlationId });
+  try {
+    options.logError?.({ correlationId });
+  } catch {
+    // Logging must never replace the generic database error.
+  }
   return new Error("Chat database unavailable");
 }
 
@@ -79,19 +85,22 @@ export function createChatDatabase(sql: Query, dbOptions: ChatDatabaseOptions = 
     },
     async persistConversation(record) {
       try {
-        await sql`
-          INSERT INTO chat_conversations (id, owner_id, created_at, expires_at)
-          VALUES (${record.conversationId}, ${record.ownerId}, ${record.createdAt}, ${record.expiresAt})
-          ON CONFLICT (id) DO UPDATE SET owner_id = EXCLUDED.owner_id, expires_at = EXCLUDED.expires_at
-        `;
-        for (const [index, message] of record.messages.entries()) {
-          await sql`
-            INSERT INTO chat_messages (conversation_id, ordinal, role, content, refused, error, input_tokens, output_tokens)
-            VALUES (${record.conversationId}, ${index}, ${message.role}, ${message.content},
-                    ${message.refused ?? false}, ${message.error ?? false},
-                    ${message.inputTokens ?? null}, ${message.outputTokens ?? null})
+        if (!sql.begin) throw new Error("Transaction unavailable");
+        await sql.begin(async (transaction) => {
+          await transaction`DELETE FROM chat_conversations WHERE id = ${record.conversationId}`;
+          await transaction`
+            INSERT INTO chat_conversations (id, owner_id, created_at, expires_at)
+            VALUES (${record.conversationId}, ${record.ownerId}, ${record.createdAt}, ${record.expiresAt})
           `;
-        }
+          for (const [index, message] of record.messages.entries()) {
+            await transaction`
+              INSERT INTO chat_messages (conversation_id, ordinal, role, content, refused, error, input_tokens, output_tokens)
+              VALUES (${record.conversationId}, ${index}, ${message.role}, ${message.content},
+                      ${message.refused ?? false}, ${message.error ?? false},
+                      ${message.inputTokens ?? null}, ${message.outputTokens ?? null})
+            `;
+          }
+        });
       } catch {
         throw databaseError(dbOptions);
       }

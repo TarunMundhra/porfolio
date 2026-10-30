@@ -7,6 +7,7 @@ import {
   type RedactedConversationRecord,
 } from "@/lib/chat/analytics";
 import { createChatDatabase } from "@/lib/chat/db";
+import { indexKnowledge, type KnowledgeIndexDatabase } from "../../scripts/index-knowledge";
 
 describe("chat persistence and analytics", () => {
   it("creates records with redacted content and no raw prompt", () => {
@@ -75,5 +76,78 @@ describe("chat persistence and analytics", () => {
     const chunks = await db.retrieveChunks([0.1, 0.2], { limit: 3, minimumSimilarity: 0.7 });
     expect(chunks[0]).toMatchObject({ id: "chunk-1", sourceId: "about", title: "About", url: "/#about", similarity: 0.9 });
     expect(queries.join("\n")).toMatch(/active/i);
+  });
+
+  it("returns an indexed chunk through the active-version retrieval path", async () => {
+    let indexed: Record<string, unknown> | undefined;
+    const database: KnowledgeIndexDatabase = {
+      async begin(callback) {
+        return callback({
+          createVersion: async () => undefined,
+          upsertChunk: async (chunk) => { indexed = chunk as unknown as Record<string, unknown>; },
+          promoteVersion: async () => undefined,
+        });
+      },
+      async close() {},
+    };
+    await indexKnowledge({ embed: async () => [0.1, 0.2] }, database);
+    const sql = Object.assign(
+      (strings: TemplateStringsArray) => {
+        expect(strings.join(" ")).toMatch(/chat_chunks/);
+        return Promise.resolve([{
+          id: "indexed-chunk",
+          source_id: indexed?.sourceId,
+          title: indexed?.title,
+          url: indexed?.url,
+          section: indexed?.section,
+          text: indexed?.text,
+          similarity: 0.95,
+        }]);
+      },
+      { begin: vi.fn() },
+    ) as never;
+    const result = await createChatDatabase(sql).retrieveChunks([0.1, 0.2], { limit: 1, minimumSimilarity: 0.7 });
+    expect(result[0]).toMatchObject({ sourceId: indexed?.sourceId, text: indexed?.text, title: indexed?.title });
+  });
+
+  it("replaces a conversation in one transaction and retries without duplicate ordinals", async () => {
+    const operations: string[] = [];
+    const tx = (strings: TemplateStringsArray) => {
+      operations.push(strings.join(" ").includes("DELETE") ? "delete" : "insert");
+      return Promise.resolve([]);
+    };
+    const sql = Object.assign(
+      () => Promise.resolve([]),
+      { begin: async (callback: (transaction: typeof tx) => Promise<void>) => callback(tx) },
+    ) as never;
+    const db = createChatDatabase(sql);
+    const record = createRedactedConversationRecord({ conversationId: "retry", ownerId: "owner", messages: [
+      { role: "user", content: "one" }, { role: "assistant", content: "two" },
+    ]});
+    await db.persistConversation(record);
+    await db.persistConversation(record);
+    expect(operations.filter((operation) => operation === "delete")).toHaveLength(2);
+    expect(operations.filter((operation) => operation === "insert")).toHaveLength(6);
+  });
+
+  it("swallows analytics observability callback failures", async () => {
+    const analytics = createAnalytics({
+      database: { persistConversation: vi.fn(async () => { throw new Error("down"); }) },
+      recordMetric: () => { throw new Error("metric logger down"); },
+      logError: () => { throw new Error("error logger down"); },
+    });
+    await expect(analytics.recordConversation(createRedactedConversationRecord({
+      conversationId: "c", ownerId: "o", messages: [],
+    }))).resolves.toBeUndefined();
+  });
+
+  it("returns a generic error when the database logger throws", async () => {
+    const logError = vi.fn(() => { throw new Error("logger leaked"); });
+    const sql = Object.assign(
+      () => Promise.reject(new Error("secret database detail")),
+      { begin: vi.fn() },
+    ) as never;
+    await expect(createChatDatabase(sql, { logError }).retrieveChunks([1], { limit: 1, minimumSimilarity: 0 })).rejects.toThrow("Chat database unavailable");
+    expect(logError).toHaveBeenCalledWith({ correlationId: expect.any(String) });
   });
 });

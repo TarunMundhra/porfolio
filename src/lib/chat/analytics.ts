@@ -46,8 +46,16 @@ export function createAnalytics(options: AnalyticsOptions) {
       try {
         await options.database.persistConversation(record);
       } catch {
-        options.recordMetric?.("chat.analytics.persistence_failed", { correlationId });
-        options.logError?.({ correlationId });
+        try {
+          options.recordMetric?.("chat.analytics.persistence_failed", { correlationId });
+        } catch {
+          // Analytics observability is best-effort.
+        }
+        try {
+          options.logError?.({ correlationId });
+        } catch {
+          // Analytics observability is best-effort.
+        }
       }
     },
     async readConversation(conversationId: string, ownerId: string): Promise<RedactedConversationRecord | undefined> {

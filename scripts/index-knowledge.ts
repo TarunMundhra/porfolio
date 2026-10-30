@@ -31,6 +31,7 @@ export interface KnowledgeIndexTransaction {
     versionId: string;
     chunkOrdinal: number;
     sourceOffset: number;
+    sourcePath?: string;
   }): Promise<void>;
   promoteVersion(versionId: string): Promise<void>;
 }
@@ -84,26 +85,26 @@ export function createDatabase(): KnowledgeIndexDatabase {
         return callback({
           createVersion: async (versionId, model) => {
             await transaction`
-              INSERT INTO knowledge_index_versions (id, embedding_model, active)
-              VALUES (${versionId}, ${model}, false)
+              INSERT INTO chat_index_versions (id, embedding_model, status)
+              VALUES (${versionId}, ${model}, 'building')
             `;
           },
           upsertChunk: async (chunk) => {
             await transaction`
-              INSERT INTO knowledge_chunks
-                (source_id, title, url, section, content, content_hash, embedding_model, embedding, index_version, chunk_ordinal, source_offset)
+              INSERT INTO chat_chunks
+                (id, version_id, source_id, source_path, title, url, section, text, content_hash, embedding_model, embedding, chunk_ordinal, source_offset)
               VALUES
-                (${chunk.sourceId}, ${chunk.title}, ${chunk.url}, ${chunk.section ?? null},
+                (${`${chunk.versionId}:${chunk.sourceId}:${chunk.chunkOrdinal}:${chunk.sourceOffset}`}, ${chunk.versionId},
+                 ${chunk.sourceId}, ${chunk.sourcePath ?? null}, ${chunk.title}, ${chunk.url}, ${chunk.section ?? null},
                  ${chunk.text}, ${chunk.contentHash}, ${chunk.embeddingModel},
-                 ${JSON.stringify(chunk.embedding)}, ${chunk.versionId}, ${chunk.chunkOrdinal}, ${chunk.sourceOffset})
-              ON CONFLICT (source_id, content_hash, embedding_model, chunk_ordinal, source_offset)
-              DO UPDATE SET title = EXCLUDED.title, url = EXCLUDED.url, section = EXCLUDED.section,
-                content = EXCLUDED.content, embedding = EXCLUDED.embedding, index_version = EXCLUDED.index_version
+                 ${JSON.stringify(chunk.embedding)}, ${chunk.chunkOrdinal}, ${chunk.sourceOffset})
+              ON CONFLICT (id) DO UPDATE SET title = EXCLUDED.title, url = EXCLUDED.url, section = EXCLUDED.section,
+                text = EXCLUDED.text, embedding = EXCLUDED.embedding, version_id = EXCLUDED.version_id
             `;
           },
           promoteVersion: async (versionId) => {
-            await transaction`UPDATE knowledge_index_versions SET active = false WHERE active = true`;
-            await transaction`UPDATE knowledge_index_versions SET active = true WHERE id = ${versionId}`;
+            await transaction`UPDATE chat_index_versions SET status = 'retired' WHERE status = 'active'`;
+            await transaction`UPDATE chat_index_versions SET status = 'active', activated_at = now() WHERE id = ${versionId}`;
           },
         });
       });
