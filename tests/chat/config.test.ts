@@ -11,7 +11,7 @@ describe("parseChatConfig", () => {
     const config = parseChatConfig({
       GEMINI_API_KEY: "gemini-secret",
       GROQ_API_KEY: "groq-secret",
-      DATABASE_URL: "postgres://user:password@example.com/chat",
+      DATABASE_URL: "postgresql://localhost:5432/portfolio",
       CHAT_ADMIN_SECRET: "admin-secret",
       CHAT_ALLOWED_ORIGINS: "https://example.com, http://localhost:3000",
       CHAT_MODEL: "gemini-2.0-flash",
@@ -25,7 +25,7 @@ describe("parseChatConfig", () => {
     expect(config).toEqual({
       geminiApiKey: "gemini-secret",
       groqApiKey: "groq-secret",
-      databaseUrl: "postgres://user:password@example.com/chat",
+      databaseUrl: "postgresql://localhost:5432/portfolio",
       adminSecret: "admin-secret",
       allowedOrigins: ["https://example.com", "http://localhost:3000"],
       model: "gemini-2.0-flash",
