@@ -41,6 +41,7 @@ export function createGroqStreamer(
       if (signal.aborted) abort();
       else signal.addEventListener("abort", abort, { once: true });
       const timeout = setTimeout(() => timeoutController.abort(), options.timeoutMs);
+      let abortListener: (() => void) | undefined;
 
       try {
         if (signal.aborted) {
@@ -62,12 +63,26 @@ export function createGroqStreamer(
             );
           }),
         ]);
-        for await (const chunk of response) {
-          if (timeoutController.signal.aborted) {
-            throw new ChatProviderError("unavailable", "Generation provider unavailable");
+        const iterator = response[Symbol.asyncIterator]();
+        const abortPromise = new Promise<never>((_, reject) => {
+          abortListener = () =>
+            reject(new ChatProviderError("unavailable", "Generation provider unavailable"));
+          if (timeoutController.signal.aborted) abortListener();
+          else timeoutController.signal.addEventListener("abort", abortListener, { once: true });
+        });
+        try {
+          while (true) {
+            const next = await Promise.race([iterator.next(), abortPromise]);
+            if (next.done) break;
+            const content = next.value.choices?.[0]?.delta?.content;
+            if (content) yield content;
           }
-          const content = chunk.choices?.[0]?.delta?.content;
-          if (content) yield content;
+        } finally {
+          if (timeoutController.signal.aborted) {
+            void Promise.resolve()
+              .then(() => iterator.return?.())
+              .catch(() => undefined);
+          }
         }
       } catch (error) {
         if (error instanceof ChatProviderError) throw error;
@@ -75,6 +90,7 @@ export function createGroqStreamer(
       } finally {
         clearTimeout(timeout);
         signal.removeEventListener("abort", abort);
+        if (abortListener) timeoutController.signal.removeEventListener("abort", abortListener);
       }
     },
   };

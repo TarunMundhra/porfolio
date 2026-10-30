@@ -93,4 +93,60 @@ describe("chat stream", () => {
     expect(abort).toHaveBeenCalledOnce();
     expect(release).toHaveBeenCalledOnce();
   });
+
+  it("releases the slot immediately when iterator shutdown throws", async () => {
+    const release = vi.fn();
+    const generate = {
+      async next() {
+        return { done: false as const, value: "token" };
+      },
+      return() {
+        throw new Error("shutdown failed");
+      },
+      [Symbol.asyncIterator]() {
+        return this;
+      },
+    };
+
+    const reader = createChatStream({
+      requestId: "request-4",
+      generate,
+      releaseSlot: release,
+    }).getReader();
+    await reader.read();
+    await reader.cancel();
+
+    expect(release).toHaveBeenCalledOnce();
+  });
+
+  it("releases the slot without waiting for pending iterator shutdown", async () => {
+    const release = vi.fn();
+    let resolveReturn!: () => void;
+    const generate = {
+      async next() {
+        return { done: false as const, value: "token" };
+      },
+      return() {
+        return new Promise<IteratorResult<string>>((resolve) => {
+          resolveReturn = () => resolve({ done: true, value: undefined });
+        });
+      },
+      [Symbol.asyncIterator]() {
+        return this;
+      },
+    };
+
+    const reader = createChatStream({
+      requestId: "request-5",
+      generate,
+      releaseSlot: release,
+    }).getReader();
+    await reader.read();
+    const cancellation = reader.cancel();
+
+    expect(release).toHaveBeenCalledOnce();
+    await Promise.resolve();
+    resolveReturn();
+    await cancellation;
+  });
 });

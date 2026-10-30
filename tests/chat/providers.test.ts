@@ -123,4 +123,29 @@ describe("provider adapters", () => {
     expect(requestSignal).toBeDefined();
     expect(requestSignal?.aborted).toBe(true);
   });
+
+  it("times out a pending stream next call and maps it to unavailable", async () => {
+    groqCreate.mockResolvedValue({
+      next: () => new Promise<IteratorResult<unknown>>(() => undefined),
+      return: vi.fn().mockResolvedValue({ done: true, value: undefined }),
+      [Symbol.asyncIterator]() {
+        return this;
+      },
+    });
+
+    const stream = createGroqStreamer({
+      groqApiKey: "secret-groq",
+      model: "qwen-2.5-32b",
+      maxOutputTokens: 42,
+      timeoutMs: 10,
+    });
+
+    await expect(
+      Array.fromAsync(stream.generate("question", new AbortController().signal)),
+    ).rejects.toMatchObject({
+      code: "unavailable",
+      message: "Generation provider unavailable",
+    });
+    expect(groqCreate.mock.results[0].value).toBeDefined();
+  });
 });

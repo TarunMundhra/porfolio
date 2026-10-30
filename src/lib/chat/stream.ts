@@ -6,7 +6,7 @@ export interface ChatStreamOptions {
   requestId: string;
   generate: AsyncIterable<string>;
   citations?: ReadonlyArray<Citation>;
-  onCancel?: () => void;
+  onCancel?: () => void | PromiseLike<void>;
   releaseSlot?: () => void;
 }
 
@@ -75,11 +75,19 @@ export function createChatStream(options: ChatStreamOptions): ReadableStream<Uin
         release();
       }
     },
-    async cancel() {
+    cancel() {
       cancelled = true;
-      options.onCancel?.();
-      await iterator.return?.();
-      release();
+      try {
+        const cancellation = options.onCancel?.();
+        if (cancellation) void Promise.resolve(cancellation).catch(() => undefined);
+      } catch {
+        // Cancellation must still release capacity.
+      } finally {
+        release();
+      }
+      void Promise.resolve()
+        .then(() => iterator.return?.())
+        .catch(() => undefined);
     },
   });
 }
