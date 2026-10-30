@@ -45,6 +45,13 @@ describe("chat security", () => {
     expect(redacted).toContain("[REDACTED]");
   });
 
+  it("redacts plain key assignments and short provider keys", () => {
+    const providerKey = ["sk", "test", "secret"].join("-");
+    const redacted = redactForAnalytics(`key=${providerKey} provider=${providerKey}`);
+    expect(redacted).not.toContain(providerKey);
+    expect(redacted).toContain("[REDACTED]");
+  });
+
   it("provides replaceable memory-safe rate limiting and bounded in-flight work", () => {
     const limiter = createRateLimiter({ limit: 1, windowMs: 60_000, now: () => 1_000 });
     expect(limiter.allow("visitor")).toBe(true);
