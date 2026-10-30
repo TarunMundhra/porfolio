@@ -23,6 +23,38 @@ import type { Citation, StreamEvent } from "@/lib/chat/contracts";
 
 const encoder = new TextEncoder();
 const MAX_BODY_BYTES = 32_000;
+const MAX_OUTPUT_CHARS = 10_000;
+const MAX_OUTPUT_BYTES = 40_000;
+
+class RequestBodyTooLargeError extends Error {}
+
+async function readRequestBody(request: Request): Promise<string> {
+  if (!request.body) throw new Error("Missing request body");
+  const reader = request.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+  try {
+    while (true) {
+      const next = await reader.read();
+      if (next.done) break;
+      total += next.value.byteLength;
+      if (total > MAX_BODY_BYTES) {
+        await reader.cancel("request body too large");
+        throw new RequestBodyTooLargeError();
+      }
+      chunks.push(next.value);
+    }
+  } finally {
+    reader.releaseLock();
+  }
+  const bytes = new Uint8Array(total);
+  let offset = 0;
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return new TextDecoder().decode(bytes);
+}
 
 interface Runtime {
   config: ChatConfig;
@@ -145,7 +177,7 @@ export async function POST(request: Request): Promise<Response> {
   const validContentType =
     contentTypeParts[0].toLowerCase() === "application/json" &&
     contentTypeParts.slice(1).every((parameter) =>
-      /^[A-Za-z0-9!#$%&'*+.^_`|~-]+=[A-Za-z0-9!#$%&'*+.^_`|~:/? -]+$/.test(parameter),
+      /^[A-Za-z0-9!#$%&'*+.^_`|~-]+=(?:"(?:[\t !#-\[\]-~]|\\[\t -~])*"|[A-Za-z0-9!#$%&'*+.^_`|~:/? -]+)$/.test(parameter),
     );
   if (!validContentType) {
     return errorResponse("invalid_request", 415, correlationId);
@@ -161,15 +193,15 @@ export async function POST(request: Request): Promise<Response> {
 
   let input: ReturnType<typeof parseChatRequest>;
   try {
-    const body = await request.text();
-    if (new TextEncoder().encode(body).byteLength > MAX_BODY_BYTES) {
-      return errorResponse("invalid_request", 413, correlationId);
-    }
+    const body = await readRequestBody(request);
     input = parseChatRequest(JSON.parse(body));
     if (input.question.length > current.config.maxInputChars) {
       return errorResponse("invalid_request", 413, correlationId);
     }
-  } catch {
+  } catch (error) {
+    if (error instanceof RequestBodyTooLargeError) {
+      return errorResponse("invalid_request", 413, correlationId);
+    }
     return errorResponse("invalid_request", 400, correlationId);
   }
 
@@ -263,6 +295,18 @@ export async function POST(request: Request): Promise<Response> {
         }
         const next = await iterator.next();
         if (!next.done) {
+          const nextChars = assembled.length + next.value.length;
+          const nextBytes = encoder.encode(assembled).byteLength + encoder.encode(next.value).byteLength;
+          if (nextChars > MAX_OUTPUT_CHARS || nextBytes > MAX_OUTPUT_BYTES) {
+            requestController.abort();
+            void Promise.resolve(iterator.return?.()).catch(() => undefined);
+            finished = true;
+            logFailure(correlationId, "output_budget", "internal");
+            controller.enqueue(encoder.encode(`${JSON.stringify({ type: "error", code: "internal", message: "Unable to complete response", correlationId })}\n`));
+            controller.close();
+            release();
+            return;
+          }
           assembled += next.value;
           controller.enqueue(encoder.encode(`${JSON.stringify({ type: "token", value: redactForAnalytics(next.value) })}\n`));
           return;

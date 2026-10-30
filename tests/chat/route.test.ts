@@ -138,6 +138,34 @@ describe("POST /api/chat", () => {
     },
   );
 
+  it("accepts a standards-valid quoted charset content type parameter", async () => {
+    const response = await POST(request(
+      { question: "Tell me about the projects." },
+      { "content-type": 'application/json; charset="utf-8"' },
+    ));
+    expect(response.status).toBe(200);
+  });
+
+  it("rejects a large body without a content-length header while reading the body", async () => {
+    const body = new TextEncoder().encode(JSON.stringify({
+      question: "Tell me about the projects.",
+      history: [{ role: "user", content: "x".repeat(32_000) }],
+    }));
+    const response = await POST(new Request("https://portfolio.example/api/chat", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        origin: "https://portfolio.example",
+        "x-forwarded-for": `body-limit-${Math.random()}`,
+      },
+      body,
+    }));
+    expect(response.status).toBe(413);
+    expect(await events(response)).toEqual([
+      expect.objectContaining({ type: "error", code: "invalid_request" }),
+    ]);
+  });
+
   it("emits the first Groq delta before the iterator completes", async () => {
     let finish!: () => void;
     const completion = new Promise<void>((resolve) => { finish = resolve; });
@@ -158,6 +186,21 @@ describe("POST /api/chat", () => {
     expect(new TextDecoder().decode(first.value)).toContain('"type":"token"');
     finish();
     await reader.cancel();
+  });
+
+  it("stops before exposing a multi-delta response beyond the output budget", async () => {
+    state.deltas = ["a".repeat(9_900), "b".repeat(200), "secret-provider-token"];
+    const response = await POST(request(
+      { question: "Tell me about the projects." },
+      { "x-forwarded-for": "output-budget-client" },
+    ));
+    const output = await events(response);
+    const tokens = output.filter((event) => event.type === "token").map((event) => String(event.value));
+    expect(tokens.join("").length).toBeLessThanOrEqual(10_000);
+    expect(output).toContainEqual(expect.objectContaining({ type: "error", code: "internal" }));
+    expect(output).not.toContainEqual(expect.objectContaining({ type: "done" }));
+    expect(JSON.stringify(output)).not.toContain("secret-provider-token");
+    expect(state.abort).toHaveBeenCalled();
   });
 
   it("releases the in-flight slot when post-acquire setup throws", async () => {
