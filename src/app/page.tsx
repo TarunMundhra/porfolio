@@ -4,6 +4,7 @@ import Navbar from "@/components/portfolio/Navbar";
 import HeroSection from "@/components/portfolio/HeroSection";
 import PageTransition from "@/components/portfolio/PageTransition";
 import Footer from "@/components/portfolio/Footer";
+import PortfolioAssistant from "@/components/portfolio/PortfolioAssistant";
 
 export default function Home() {
   return (
@@ -26,6 +27,7 @@ export default function Home() {
       </main>
 
       <Footer />
+      <PortfolioAssistant />
     </div>
   );
 }
