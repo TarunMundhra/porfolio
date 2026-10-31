@@ -140,4 +140,56 @@ describe("PortfolioAssistant", () => {
     expect(requestSignals[1].aborted).toBe(true);
     rendered.unmount();
   });
+
+  it("ignores queued stale events after cancellation when a newer request starts", async () => {
+    let releaseFirstRead!: () => void;
+    let calls = 0;
+    vi.spyOn(global, "fetch").mockImplementation(() => {
+      calls += 1;
+      if (calls === 1) {
+        let readCount = 0;
+        const staleChunk = new TextEncoder().encode(
+          `${JSON.stringify({ type: "token", value: "STALE TOKEN" })}\n${JSON.stringify({ type: "citation", citation: { title: "Stale source", url: "/#about" } })}\n`,
+        );
+        const reader = {
+          read: () => {
+            readCount += 1;
+            if (readCount === 1) {
+              return Promise.resolve({ done: false, value: new TextEncoder().encode(`${JSON.stringify({ type: "token", value: "First partial" })}\n`) });
+            }
+            return new Promise<{ done: false; value: Uint8Array }>((resolve) => {
+              releaseFirstRead = () => resolve({ done: false, value: staleChunk });
+            });
+          },
+          cancel: () => Promise.resolve(),
+        };
+        return Promise.resolve({ ok: true, body: { getReader: () => reader } } as unknown as Response);
+      }
+      const body = [
+        JSON.stringify({ type: "token", value: "Current answer" }),
+        JSON.stringify({ type: "citation", citation: { title: "Current source", url: "/#projects" } }),
+        JSON.stringify({ type: "done" }),
+      ].join("\n");
+      return Promise.resolve(new Response(body));
+    });
+
+    render(React.createElement(PortfolioAssistant));
+    fireEvent.click(screen.getByRole("button", { name: /ask about tarun/i }));
+    fireEvent.change(screen.getByRole("textbox", { name: /question/i }), {
+      target: { value: "First question" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /send question/i }));
+    expect(await screen.findByText("First partial")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /stop generating/i }));
+    releaseFirstRead();
+
+    fireEvent.change(screen.getByRole("textbox", { name: /question/i }), {
+      target: { value: "Second question" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /send question/i }));
+    expect(await screen.findByText("Current answer")).toBeInTheDocument();
+    expect(screen.queryByText("STALE TOKEN")).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /stale source/i })).not.toBeInTheDocument();
+    expect(await screen.findByRole("link", { name: /current source/i })).toHaveAttribute("href", "/#projects");
+  });
 });

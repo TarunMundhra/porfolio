@@ -28,7 +28,7 @@ export default function PortfolioAssistant() {
   const promptRef = useRef<HTMLInputElement>(null);
   const abortRef = useRef<AbortController | null>(null);
   const lastQuestionRef = useRef("");
-  const readerRef = useRef<ReadableStreamDefaultReader<Uint8Array> | null>(null);
+  const readerRef = useRef<{ requestId: number; reader: ReadableStreamDefaultReader<Uint8Array> } | null>(null);
   const openedRef = useRef(false);
   const activeRequestRef = useRef<{ id: number; assistantId: string; controller: AbortController } | null>(null);
   const generationRef = useRef(0);
@@ -37,8 +37,10 @@ export default function PortfolioAssistant() {
     const active = activeRequestRef.current;
     if (!active || (requestId !== undefined && active.id !== requestId)) return;
     active.controller.abort();
-    void readerRef.current?.cancel();
-    readerRef.current = null;
+    if (readerRef.current?.requestId === active.id) {
+      void readerRef.current.reader.cancel();
+      readerRef.current = null;
+    }
     activeRequestRef.current = null;
     setBusy(false);
     setMessages((current) =>
@@ -118,7 +120,11 @@ export default function PortfolioAssistant() {
       });
       if (!response.ok || !response.body) throw new Error("request failed");
       const reader = response.body.getReader();
-      readerRef.current = reader;
+      if (activeRequestRef.current?.id !== requestId || controller.signal.aborted) {
+        await reader.cancel();
+        return;
+      }
+      readerRef.current = { requestId, reader };
       const decoder = new TextDecoder();
       let buffer = "";
       let complete = false;
@@ -128,6 +134,7 @@ export default function PortfolioAssistant() {
         const lines = buffer.split("\n");
         buffer = lines.pop() ?? "";
         for (const line of lines) {
+          if (activeRequestRef.current?.id !== requestId || controller.signal.aborted) break;
           if (!line.trim()) continue;
           let event: { type?: string; value?: string; message?: string; citation?: Citation };
           try {
@@ -155,7 +162,7 @@ export default function PortfolioAssistant() {
             complete = true;
           }
         }
-        if (done) complete = true;
+        if (done || activeRequestRef.current?.id !== requestId || controller.signal.aborted) complete = true;
       }
     } catch {
       if (!controller.signal.aborted && activeRequestRef.current?.id === requestId) {
@@ -172,7 +179,7 @@ export default function PortfolioAssistant() {
           current.map((message) => (message.id === assistantId ? { ...message, streaming: false } : message)),
         );
         setBusy(false);
-        readerRef.current = null;
+        if (readerRef.current?.requestId === requestId) readerRef.current = null;
         abortRef.current = null;
         activeRequestRef.current = null;
       }
