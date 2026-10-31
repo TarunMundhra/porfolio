@@ -101,4 +101,43 @@ describe("PortfolioAssistant", () => {
     expect(focusables[focusables.length - 1]).toHaveFocus();
     expect(close).toBeTruthy();
   });
+
+  it("aborts and finalizes an active stream when the drawer closes or unmounts", async () => {
+    const requestSignals: AbortSignal[] = [];
+    let resolveRequest!: (response: Response) => void;
+    vi.spyOn(global, "fetch").mockImplementation((_input, init) => {
+      requestSignals.push(init?.signal as AbortSignal);
+      return new Promise((resolve) => { resolveRequest = resolve; });
+    });
+
+    const rendered = render(React.createElement(PortfolioAssistant));
+    fireEvent.click(screen.getByRole("button", { name: /ask about tarun/i }));
+    fireEvent.change(screen.getByRole("textbox", { name: /question/i }), {
+      target: { value: "Tell me about projects" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /send question/i }));
+    const stream = new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(new TextEncoder().encode(`${JSON.stringify({ type: "token", value: "Partial" })}\n`));
+      },
+    });
+    resolveRequest(new Response(stream));
+    expect(await screen.findByText("Partial")).toBeInTheDocument();
+
+    fireEvent.click(screen.getAllByRole("button", { name: /close assistant/i })[1]);
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    expect(screen.queryByLabelText("Assistant is typing")).not.toBeInTheDocument();
+    expect(requestSignals[0].aborted).toBe(true);
+
+    const second = render(React.createElement(PortfolioAssistant));
+    fireEvent.click(screen.getAllByRole("button", { name: /ask about tarun/i })[1]);
+    fireEvent.change(screen.getAllByRole("textbox", { name: /question/i })[0], {
+      target: { value: "Tell me about experience" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /send question/i }));
+    await waitFor(() => expect(requestSignals).toHaveLength(2));
+    second.unmount();
+    expect(requestSignals[1].aborted).toBe(true);
+    rendered.unmount();
+  });
 });

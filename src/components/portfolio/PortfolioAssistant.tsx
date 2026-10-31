@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import AssistantMessage from "./AssistantMessage";
 
 type Message = { id: string; role: "user" | "assistant" | "error"; content: string; streaming?: boolean };
@@ -30,6 +30,23 @@ export default function PortfolioAssistant() {
   const lastQuestionRef = useRef("");
   const readerRef = useRef<ReadableStreamDefaultReader<Uint8Array> | null>(null);
   const openedRef = useRef(false);
+  const activeRequestRef = useRef<{ id: number; assistantId: string; controller: AbortController } | null>(null);
+  const generationRef = useRef(0);
+
+  const cleanupRequest = useCallback((requestId?: number) => {
+    const active = activeRequestRef.current;
+    if (!active || (requestId !== undefined && active.id !== requestId)) return;
+    active.controller.abort();
+    void readerRef.current?.cancel();
+    readerRef.current = null;
+    activeRequestRef.current = null;
+    setBusy(false);
+    setMessages((current) =>
+      current.map((message) =>
+        message.id === active.assistantId ? { ...message, streaming: false } : message,
+      ),
+    );
+  }, []);
 
   useLayoutEffect(() => {
     if (open) {
@@ -43,7 +60,10 @@ export default function PortfolioAssistant() {
   useEffect(() => {
     if (!open) return;
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setOpen(false);
+      if (event.key === "Escape") {
+        cleanupRequest();
+        setOpen(false);
+      }
       if (event.key !== "Tab") return;
       const focusable = Array.from(
         document.querySelector('[role="dialog"]')?.querySelectorAll<HTMLElement>(
@@ -65,15 +85,10 @@ export default function PortfolioAssistant() {
     return () => document.removeEventListener("keydown", onKeyDown);
   }, [open]);
 
+  useEffect(() => () => cleanupRequest(), [cleanupRequest]);
+
   const stop = () => {
-    abortRef.current?.abort();
-    void readerRef.current?.cancel();
-    readerRef.current = null;
-    abortRef.current = null;
-    setBusy(false);
-    setMessages((current) =>
-      current.map((message) => (message.streaming ? { ...message, streaming: false } : message)),
-    );
+    cleanupRequest();
   };
 
   const send = async (value = question) => {
@@ -84,6 +99,7 @@ export default function PortfolioAssistant() {
     setError("");
     const userId = `${Date.now()}-user`;
     const assistantId = `${Date.now()}-assistant`;
+    const requestId = ++generationRef.current;
     setMessages((current) => [
       ...current,
       { id: userId, role: "user", content: trimmed },
@@ -92,6 +108,7 @@ export default function PortfolioAssistant() {
     setBusy(true);
     const controller = new AbortController();
     abortRef.current = controller;
+    activeRequestRef.current = { id: requestId, assistantId, controller };
     try {
       const response = await fetch("/api/chat", {
         method: "POST",
@@ -141,28 +158,29 @@ export default function PortfolioAssistant() {
         if (done) complete = true;
       }
     } catch {
-      if (!controller.signal.aborted) {
+      if (!controller.signal.aborted && activeRequestRef.current?.id === requestId) {
         setError(safeError());
         setMessages((current) =>
           current.map((message) =>
             message.id === assistantId ? { ...message, role: "error", content: safeError(), streaming: false } : message,
           ),
         );
-        readerRef.current = null;
       }
     } finally {
-      setMessages((current) =>
-        current.map((message) => (message.id === assistantId ? { ...message, streaming: false } : message)),
-      );
-      setBusy(false);
-      abortRef.current = null;
+      if (activeRequestRef.current?.id === requestId) {
+        setMessages((current) =>
+          current.map((message) => (message.id === assistantId ? { ...message, streaming: false } : message)),
+        );
+        setBusy(false);
+        readerRef.current = null;
+        abortRef.current = null;
+        activeRequestRef.current = null;
+      }
     }
   };
 
   const clear = () => {
-    abortRef.current?.abort();
-    abortRef.current = null;
-    setBusy(false);
+    cleanupRequest();
     setMessages([]);
     setError("");
   };
@@ -180,7 +198,7 @@ export default function PortfolioAssistant() {
       </button>
       {open && (
         <div className="fixed inset-0 z-50" role="presentation">
-          <button aria-label="Close assistant" className="absolute inset-0 bg-slate-950/60" onClick={() => setOpen(false)} />
+          <button aria-label="Close assistant" className="absolute inset-0 bg-slate-950/60" onClick={() => { cleanupRequest(); setOpen(false); }} />
           <section
             role="dialog"
             aria-modal="true"
@@ -192,7 +210,7 @@ export default function PortfolioAssistant() {
                 <h2 id="assistant-title" className="text-lg font-semibold text-white">Portfolio assistant</h2>
                 <p className="text-xs text-slate-400">Ask about Tarun&apos;s work, experience, or projects.</p>
               </div>
-              <button type="button" onClick={() => setOpen(false)} aria-label="Close assistant" className="rounded-lg px-2 py-1 text-xl text-slate-300 hover:bg-white/10">×</button>
+              <button type="button" onClick={() => { cleanupRequest(); setOpen(false); }} aria-label="Close assistant" className="rounded-lg px-2 py-1 text-xl text-slate-300 hover:bg-white/10">×</button>
             </header>
             <div className="mt-4 flex-1 space-y-3 overflow-y-auto pr-1" aria-live="polite">
               {messages.length === 0 && (
