@@ -3,12 +3,17 @@
 import type { ReactNode } from "react";
 
 const APPROVED_URLS = new Set([
+  "/",
+  "/#about",
+  "/#experience",
+  "/#projects",
+  "/#contact",
   "https://github.com/TarunMundhra",
   "https://linkedin.com/in/tarun-mundhra-0a0a5629a",
   "/Tarun-Mundhra-Resume.pdf",
 ]);
 
-function isApprovedUrl(url: string): boolean {
+export function isApprovedUrl(url: string): boolean {
   if (APPROVED_URLS.has(url)) return true;
   return /^https:\/\/github\.com\/(?:TarunMundhra|KGP-Presence|GC-OpenSoft-2026)(?:\/[\w./-]+)?$/.test(url);
 }
@@ -54,10 +59,12 @@ export default function AssistantMessage({
   content,
   role,
   streaming = false,
+  citations = [],
 }: {
   content: string;
   role: "user" | "assistant" | "error";
   streaming?: boolean;
+  citations?: ReadonlyArray<{ title: string; url: string; section?: string }>;
 }) {
   return (
     <div
@@ -72,6 +79,21 @@ export default function AssistantMessage({
     >
       {renderMarkdown(content)}
       {streaming && <span aria-label="Assistant is typing" className="ml-1 inline-block animate-pulse">▌</span>}
+      {role === "assistant" && citations.length > 0 && (
+        <div className="mt-2 flex flex-wrap gap-1.5 border-t border-white/10 pt-2">
+          {citations.filter((citation) => isApprovedUrl(citation.url)).map((citation) => (
+            <a
+              key={`${citation.url}-${citation.title}`}
+              href={citation.url}
+              target={citation.url.startsWith("http") ? "_blank" : undefined}
+              rel={citation.url.startsWith("http") ? "noreferrer noopener" : undefined}
+              className="rounded-full border border-emerald-300/20 bg-emerald-400/10 px-2 py-0.5 text-xs text-emerald-200"
+            >
+              {citation.section ? `${citation.section}: ` : ""}{citation.title}
+            </a>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

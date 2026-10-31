@@ -4,6 +4,8 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import AssistantMessage from "./AssistantMessage";
 
 type Message = { id: string; role: "user" | "assistant" | "error"; content: string; streaming?: boolean };
+type Citation = { title: string; url: string; section?: string };
+type AssistantMessageState = Message & { citations?: Citation[] };
 
 const SUGGESTIONS = [
   "What projects has Tarun built?",
@@ -19,26 +21,45 @@ function safeError(): string {
 export default function PortfolioAssistant() {
   const [open, setOpen] = useState(false);
   const [question, setQuestion] = useState("");
-  const [messages, setMessages] = useState<Message[]>([]);
+  const [messages, setMessages] = useState<AssistantMessageState[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const launcherRef = useRef<HTMLButtonElement>(null);
   const promptRef = useRef<HTMLInputElement>(null);
   const abortRef = useRef<AbortController | null>(null);
   const lastQuestionRef = useRef("");
+  const readerRef = useRef<ReadableStreamDefaultReader<Uint8Array> | null>(null);
+  const openedRef = useRef(false);
 
   useLayoutEffect(() => {
     if (open) {
+      openedRef.current = true;
       promptRef.current?.focus();
       return;
     }
-    launcherRef.current?.focus();
+    if (openedRef.current) launcherRef.current?.focus();
   }, [open]);
 
   useEffect(() => {
     if (!open) return;
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") setOpen(false);
+      if (event.key !== "Tab") return;
+      const focusable = Array.from(
+        document.querySelector('[role="dialog"]')?.querySelectorAll<HTMLElement>(
+          "button, input, [href], select, textarea, [tabindex]:not([tabindex='-1'])",
+        ) ?? [],
+      ).filter((element) => !element.hasAttribute("disabled"));
+      if (focusable.length === 0) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
     };
     document.addEventListener("keydown", onKeyDown);
     return () => document.removeEventListener("keydown", onKeyDown);
@@ -46,12 +67,13 @@ export default function PortfolioAssistant() {
 
   const stop = () => {
     abortRef.current?.abort();
+    void readerRef.current?.cancel();
+    readerRef.current = null;
     abortRef.current = null;
     setBusy(false);
     setMessages((current) =>
       current.map((message) => (message.streaming ? { ...message, streaming: false } : message)),
     );
-    setError("Generation stopped. You can retry the question.");
   };
 
   const send = async (value = question) => {
@@ -79,6 +101,7 @@ export default function PortfolioAssistant() {
       });
       if (!response.ok || !response.body) throw new Error("request failed");
       const reader = response.body.getReader();
+      readerRef.current = reader;
       const decoder = new TextDecoder();
       let buffer = "";
       let complete = false;
@@ -89,7 +112,7 @@ export default function PortfolioAssistant() {
         buffer = lines.pop() ?? "";
         for (const line of lines) {
           if (!line.trim()) continue;
-          let event: { type?: string; value?: string; message?: string };
+          let event: { type?: string; value?: string; message?: string; citation?: Citation };
           try {
             event = JSON.parse(line) as typeof event;
           } catch {
@@ -99,6 +122,14 @@ export default function PortfolioAssistant() {
             setMessages((current) =>
               current.map((message) =>
                 message.id === assistantId ? { ...message, content: message.content + event.value } : message,
+              ),
+            );
+          } else if (event.type === "citation" && event.citation) {
+            setMessages((current) =>
+              current.map((message) =>
+                message.id === assistantId
+                  ? { ...message, citations: [...(message.citations ?? []), event.citation!] }
+                  : message,
               ),
             );
           } else if (event.type === "error") {
@@ -117,6 +148,7 @@ export default function PortfolioAssistant() {
             message.id === assistantId ? { ...message, role: "error", content: safeError(), streaming: false } : message,
           ),
         );
+        readerRef.current = null;
       }
     } finally {
       setMessages((current) =>
@@ -173,7 +205,7 @@ export default function PortfolioAssistant() {
                   ))}
                 </div>
               )}
-              {messages.map((message) => <AssistantMessage key={message.id} {...message} />)}
+              {messages.map((message) => <AssistantMessage key={message.id} {...message} citations={message.citations} />)}
               {error && !messages.some((message) => message.role === "error") && <AssistantMessage role="error" content={error} />}
             </div>
             <div className="mt-4 space-y-2">

@@ -30,6 +30,14 @@ describe("PortfolioAssistant", () => {
         value:
           "See [my work](https://github.com/TarunMundhra) and [unsafe](https://example.com). <script>alert(1)</script>",
       }),
+      JSON.stringify({
+        type: "citation",
+        citation: {
+          title: "Tarun Mundhra Resume",
+          url: "/Tarun-Mundhra-Resume.pdf",
+          section: "Resume",
+        },
+      }),
       JSON.stringify({ type: "done", requestId: "req-1" }),
     ].join("\n");
     vi.spyOn(global, "fetch").mockResolvedValue(
@@ -47,15 +55,15 @@ describe("PortfolioAssistant", () => {
     );
     expect(screen.queryByRole("link", { name: "unsafe" })).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "unsafe" })).not.toBeInTheDocument();
+    expect(await screen.findByRole("link", { name: /tarun mundhra resume/i })).toHaveAttribute(
+      "href",
+      "/Tarun-Mundhra-Resume.pdf",
+    );
   });
 
-  it("supports stop, retry, clear, and presents a safe error", async () => {
-    let rejectRequest!: (error: Error) => void;
-    vi.spyOn(global, "fetch").mockReturnValue(
-      new Promise((_, reject) => {
-        rejectRequest = reject;
-      }),
-    );
+  it("stops an in-flight response without an error and preserves partial content", async () => {
+    let resolveRequest!: (response: Response) => void;
+    vi.spyOn(global, "fetch").mockReturnValue(new Promise((resolve) => { resolveRequest = resolve; }));
 
     render(React.createElement(PortfolioAssistant));
     fireEvent.click(screen.getByRole("button", { name: /ask about tarun/i }));
@@ -63,11 +71,34 @@ describe("PortfolioAssistant", () => {
     fireEvent.change(prompt, { target: { value: "Tell me about experience" } });
     fireEvent.click(screen.getByRole("button", { name: /send question/i }));
     expect(await screen.findByRole("button", { name: /stop generating/i })).toBeInTheDocument();
+    const stream = new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(new TextEncoder().encode(`${JSON.stringify({ type: "token", value: "Partial answer" })}\n`));
+      },
+    });
+    resolveRequest(new Response(stream));
+    expect(await screen.findByText("Partial answer")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: /stop generating/i }));
-    rejectRequest(new Error("secret server internals"));
-    expect(await screen.findByText(/generation stopped/i)).toBeInTheDocument();
-    expect(screen.queryByText(/secret server internals/i)).not.toBeInTheDocument();
+    expect(screen.getByText("Partial answer")).toBeInTheDocument();
+    expect(screen.queryByText(/generation stopped|unable to complete/i)).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: /clear conversation/i }));
     expect(screen.queryByText("Tell me about experience")).not.toBeInTheDocument();
+  });
+
+  it("traps Tab navigation inside the dialog and does not focus the launcher on mount", () => {
+    render(React.createElement(PortfolioAssistant));
+    const launcher = screen.getByRole("button", { name: /ask about tarun/i });
+    expect(launcher).not.toHaveFocus();
+    fireEvent.click(launcher);
+    const dialog = screen.getByRole("dialog");
+    const close = screen.getAllByRole("button", { name: /close assistant/i })[1];
+    const focusables = Array.from(dialog.querySelectorAll<HTMLElement>("button, input"));
+    focusables[focusables.length - 1].focus();
+    fireEvent.keyDown(dialog, { key: "Tab" });
+    expect(focusables[0]).toHaveFocus();
+    focusables[0].focus();
+    fireEvent.keyDown(dialog, { key: "Tab", shiftKey: true });
+    expect(focusables[focusables.length - 1]).toHaveFocus();
+    expect(close).toBeTruthy();
   });
 });
