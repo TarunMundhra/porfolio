@@ -20,7 +20,8 @@
 ## Release validation
 
 - [ ] Run type-check, unit tests, Playwright tests, and production build in CI.
-- [ ] Run a staging live-streaming smoke test with disposable test data and mocks or staging provider credentials; verify start, token, citation, done, cancellation, and generic error events.
+- [ ] Run the local deterministic route smoke suite with `npm run test:e2e`; Playwright starts Next with `CHAT_TEST_MODE=1` and test-only placeholder credentials, so it never contacts providers or a database.
+- [ ] Run a staging live-streaming smoke test separately with disposable test data and staging-only provider credentials; invoke `npx playwright test tests/e2e --config=playwright.staging.config.ts` only when that ignored, non-committed staging config is present, and verify start, token, citation, done, cancellation, and generic error events.
 - [ ] Ask an unsupported question and an injection question in staging; verify refusal/fallback responses and absence of citations that were not retrieved.
 - [ ] Verify analytics redaction/auth and retention deletion with a disposable staging conversation.
 - [ ] Confirm index promotion and retrieval from the newly active version without running the indexer against production content outside the manifest.

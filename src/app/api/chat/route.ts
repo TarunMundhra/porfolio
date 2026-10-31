@@ -100,6 +100,45 @@ let runtime: Runtime | undefined;
 function getRuntime(): Runtime {
   if (runtime) return runtime;
   const config = parseChatConfig();
+  if (process.env.CHAT_TEST_MODE === "1") {
+    const chunk = {
+      id: "test-project",
+      sourceId: "test-project",
+      title: "Test Project",
+      url: "/projects/test",
+      text: "Tarun built Project One.",
+      similarity: 1,
+    };
+    runtime = {
+      config,
+      database: {
+        retrieveChunks: async () => [chunk],
+        persistConversation: async () => undefined,
+        getConversation: async () => undefined,
+        deleteConversation: async () => undefined,
+        purgeExpired: async () => undefined,
+      },
+      embedder: { embed: async () => [[1]] },
+      streamer: {
+        generate: async function* (_prompt, signal) {
+          if (_prompt.includes("provider error")) throw new Error("test provider failure");
+          if (_prompt.includes("cancel stream")) {
+            await new Promise<void>((resolve) => signal.addEventListener("abort", () => resolve(), { once: true }));
+            return;
+          }
+          yield "Tarun built Project One. [1]";
+        },
+      },
+      analytics: createAnalytics({
+        database: {
+          persistConversation: async () => undefined,
+        },
+      }),
+      rateLimiter: createRateLimiter({ limit: 100, windowMs: 60_000 }),
+      inFlight: createInFlightCounter(16),
+    };
+    return runtime;
+  }
   const sql = postgres(config.databaseUrl);
   const database = createChatDatabase(sql as never);
   runtime = {
