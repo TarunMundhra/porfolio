@@ -1,16 +1,8 @@
-import postgres from "postgres";
 import { adminResponse, isAdminRequest } from "@/lib/chat/admin-auth";
+import { getAdminDatabase } from "@/lib/chat/admin-db";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-
-type Sql = ReturnType<typeof postgres>;
-
-function database(): Sql {
-  const url = process.env.DATABASE_URL;
-  if (!url) throw new Error("Database is not configured");
-  return postgres(url, { max: 1 });
-}
 
 function integer(value: unknown): number {
   const parsed = Number(value);
@@ -28,7 +20,7 @@ export async function GET(request: Request): Promise<Response> {
   const offset = (page - 1) * pageSize;
 
   try {
-    const sql = database();
+    const sql = getAdminDatabase();
     const [metricRows, recordRows] = await Promise.all([
       sql`
         SELECT

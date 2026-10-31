@@ -1,5 +1,5 @@
-import postgres from "postgres";
 import { adminResponse, isAdminRequest } from "@/lib/chat/admin-auth";
+import { getAdminDatabase } from "@/lib/chat/admin-db";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -24,9 +24,7 @@ export async function DELETE(request: Request): Promise<Response> {
   }
 
   try {
-    const url = process.env.DATABASE_URL;
-    if (!url) throw new Error("Database is not configured");
-    const sql = postgres(url, { max: 1 });
+    const sql = getAdminDatabase();
     if (operation === "expired") {
       await sql`SELECT purge_expired_chat_data()`;
     } else {

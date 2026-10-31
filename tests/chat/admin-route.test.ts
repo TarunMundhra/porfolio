@@ -1,9 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const query = vi.fn();
-const sql = Object.assign(query, { end: vi.fn() });
+const { query, sql, postgresFactory } = vi.hoisted(() => {
+  const query = vi.fn();
+  const sql = Object.assign(query, { end: vi.fn() });
+  return { query, sql, postgresFactory: vi.fn(() => sql) };
+});
 
-vi.mock("postgres", () => ({ default: vi.fn(() => sql) }));
+vi.mock("postgres", () => ({ default: postgresFactory }));
 
 import { GET } from "@/app/api/admin/chat/route";
 import { DELETE } from "@/app/api/admin/chat/delete/route";
@@ -73,5 +76,21 @@ describe("admin chat routes", () => {
     }));
     expect(purged.status).toBe(200);
     expect(query).toHaveBeenCalledTimes(2);
+  });
+
+  it("reuses one warm-function database client across admin operations", async () => {
+    process.env.DATABASE_URL = "postgresql://localhost:5432/portfolio?warm-test=1";
+    query
+      .mockResolvedValueOnce([{ total_conversations: "0", total_messages: "0", total_events: "0", refused_messages: "0", error_messages: "0" }])
+      .mockResolvedValueOnce([]);
+    await GET(request("/api/admin/chat", { headers: { authorization: "Bearer test-admin-secret" } }));
+    query.mockResolvedValue([]);
+    await DELETE(request("/api/admin/chat/delete", {
+      method: "DELETE",
+      headers: { authorization: "Bearer test-admin-secret", "content-type": "application/json" },
+      body: JSON.stringify({ operation: "expired" }),
+    }));
+    expect(postgresFactory).toHaveBeenCalledTimes(1);
+    expect(sql.end).not.toHaveBeenCalled();
   });
 });
