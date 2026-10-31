@@ -10,7 +10,7 @@
     "type-check": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:e2e": "playwright test",
+    "test:e2e": "playwright test tests/e2e",
     "index:knowledge": "tsx scripts/index-knowledge.ts"
   },
   "dependencies": {

@@ -104,7 +104,7 @@ export function redactForAnalytics(value: string): string {
     .replace(/(?<!\d)(?:\+?\d[\d\s().-]{7,}\d)(?!\d)/g, "[REDACTED]")
     .replace(/\bBearer\s+[A-Za-z0-9._~+/=-]{12,}\b/gi, "Bearer [REDACTED]")
     .replace(/\b(?:key|api[_-]?key|token|secret|password|opaque)\s*[:=]\s*\S+/gi, "[REDACTED]")
-    .replace(/\b(?:sk|pk|ghp|AIza)[-_][A-Za-z0-9_-]{4,}\b/g, "[REDACTED]")
+    .replace(/\b(?:(?:sk|pk|ghp)[-_][A-Za-z0-9_-]{4,}|AIzaSy[A-Za-z0-9_-]{8,})\b/g, "[REDACTED]")
     .replace(/\b[A-Za-z0-9_-]{32,}\b/g, "[REDACTED]");
 }
 
