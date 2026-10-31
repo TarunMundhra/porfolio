@@ -1,0 +1,16 @@
+{
+  "functions": {
+    "src/app/api/chat/route.ts": {
+      "maxDuration": 60,
+      "regions": ["iad1"]
+    },
+    "src/app/api/admin/chat/route.ts": {
+      "maxDuration": 30,
+      "regions": ["iad1"]
+    },
+    "src/app/api/admin/chat/delete/route.ts": {
+      "maxDuration": 30,
+      "regions": ["iad1"]
+    }
+  }
+}
