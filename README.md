@@ -89,7 +89,9 @@ workflow before enabling chat. Schedule `purge_expired_chat_data()` with the
 provider scheduler, and verify `CHAT_ANALYTICS_RETENTION_DAYS` matches the approved
 retention policy. The owner can explicitly delete one conversation or purge expired
 records at `DELETE /api/admin/chat/delete` using an `Authorization: Bearer ...`
-header. Query-string credentials are never accepted.
+header. Query-string credentials are never accepted. The same scheduled
+function removes rate-limit rows whose window is older than one day; run it at
+least daily to keep stale anonymous/client buckets bounded.
 
 ### Keys, origin, headers, and streaming checks
 
@@ -100,6 +102,12 @@ approved origin succeeds and an untrusted origin fails; inspect
 smoke test. Confirm the admin route returns aggregates and redacted metadata only:
 never embeddings, provider responses, IP addresses, or unredacted content. Verify
 conversation deletion and retention purge against a non-production database.
+
+Rate limiting uses one shared `anonymous` bucket unless
+`CHAT_TRUSTED_IDENTITY_HEADER` is explicitly configured. In Vercel, configure
+this only for a header that the Vercel proxy overwrites with a normalized,
+trusted platform identity; do not configure a client-writable header.
+`x-forwarded-for` and other arbitrary forwarding headers are never trusted.
 
 ### Incident response
 

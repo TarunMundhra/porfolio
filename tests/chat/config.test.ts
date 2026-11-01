@@ -38,4 +38,23 @@ describe("parseChatConfig", () => {
     expect(config).not.toHaveProperty("GEMINI_API_KEY");
     expect(config).not.toHaveProperty("raw");
   });
+
+  it("normalizes the explicitly configured trusted identity header", () => {
+    const config = parseChatConfig({
+      GEMINI_API_KEY: "gemini-secret",
+      GROQ_API_KEY: "groq-secret",
+      DATABASE_URL: "postgresql://localhost:5432/portfolio",
+      CHAT_ADMIN_SECRET: "admin-secret",
+      CHAT_ALLOWED_ORIGINS: "https://example.com",
+      CHAT_MODEL: "gemini-2.0-flash",
+      CHAT_EMBEDDING_MODEL: "text-embedding-004",
+      CHAT_MAX_INPUT_CHARS: "4000",
+      CHAT_MAX_OUTPUT_TOKENS: "800",
+      CHAT_RATE_LIMIT_PER_MINUTE: "30",
+      CHAT_ANALYTICS_RETENTION_DAYS: "90",
+      CHAT_TRUSTED_IDENTITY_HEADER: " X-Vercel-Id ",
+    });
+
+    expect(config.trustedIdentityHeader).toBe("x-vercel-id");
+  });
 });

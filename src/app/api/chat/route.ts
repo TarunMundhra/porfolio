@@ -245,7 +245,11 @@ function logFailure(correlationId: string, stage: string, code: string): void {
 }
 
 function clientKey(request: Request): string {
-  return request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "anonymous";
+  const configuredHeader = getRuntime().config.trustedIdentityHeader;
+  if (!configuredHeader || !/^[a-z0-9!#$%&'*+.^_`|~-]+$/.test(configuredHeader)) return "anonymous";
+  const identity = request.headers.get(configuredHeader)?.trim();
+  if (!identity || identity.length > 256 || /[\u0000-\u001f\u007f,\s]/.test(identity)) return "anonymous";
+  return identity;
 }
 
 function citationsFor(chunks: ReadonlyArray<{
@@ -486,6 +490,12 @@ export async function POST(request: Request): Promise<Response> {
       finished = true;
       requestController.abort();
       void Promise.resolve(iterator?.return?.()).catch(() => undefined);
+      recordOutcome(current, input, correlationId, {
+        answer: "Request cancelled",
+        error: true,
+        errorCode: "cancelled",
+        providerStatus: "cancelled",
+      });
       release();
     },
   });

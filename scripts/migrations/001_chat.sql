@@ -69,6 +69,7 @@ CREATE INDEX IF NOT EXISTS chat_conversations_retention_idx ON chat_conversation
 
 CREATE OR REPLACE FUNCTION purge_expired_chat_data() RETURNS void LANGUAGE sql AS $$
   DELETE FROM chat_conversations WHERE expires_at <= now();
+  DELETE FROM chat_rate_limits WHERE window_started_at <= now() - interval '1 day';
 $$;
 
--- Schedule purge_expired_chat_data() with the managed Postgres provider's scheduler.
+-- Schedule purge_expired_chat_data() at least daily with the managed Postgres provider's scheduler.

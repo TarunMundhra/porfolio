@@ -14,6 +14,7 @@ const environmentSchema = z.object({
   CHAT_MAX_OUTPUT_TOKENS: positiveInteger,
   CHAT_RATE_LIMIT_PER_MINUTE: positiveInteger,
   CHAT_ANALYTICS_RETENTION_DAYS: positiveInteger,
+  CHAT_TRUSTED_IDENTITY_HEADER: z.string().optional(),
 });
 
 export type ChatConfig = {
@@ -28,6 +29,7 @@ export type ChatConfig = {
   maxOutputTokens: number;
   rateLimitPerMinute: number;
   analyticsRetentionDays: number;
+  trustedIdentityHeader?: string;
 };
 
 function normalizeOrigins(origins: string): string[] {
@@ -59,5 +61,8 @@ export function parseChatConfig(
     maxOutputTokens: parsed.CHAT_MAX_OUTPUT_TOKENS,
     rateLimitPerMinute: parsed.CHAT_RATE_LIMIT_PER_MINUTE,
     analyticsRetentionDays: parsed.CHAT_ANALYTICS_RETENTION_DAYS,
+    ...(parsed.CHAT_TRUSTED_IDENTITY_HEADER?.trim()
+      ? { trustedIdentityHeader: parsed.CHAT_TRUSTED_IDENTITY_HEADER.trim().toLowerCase() }
+      : {}),
   };
 }

@@ -35,6 +35,7 @@ vi.mock("@/lib/chat/config", () => ({
     maxOutputTokens: 100,
     rateLimitPerMinute: 2,
     analyticsRetentionDays: 30,
+    trustedIdentityHeader: "x-vercel-id",
   }),
 }));
 
@@ -74,7 +75,7 @@ function request(
     headers: {
       "content-type": "application/json",
       origin: "https://portfolio.example",
-      "x-forwarded-for": state.clientKey,
+      "x-vercel-id": state.clientKey,
       ...headers,
     },
     body: JSON.stringify(body),
@@ -218,7 +219,7 @@ describe("POST /api/chat", () => {
     for (let index = 0; index < 17; index += 1) {
       responses.push(await POST(request(
         { question: "Tell me about the projects." },
-        { "x-forwarded-for": `setup-error-${index}` },
+        { "x-vercel-id": `setup-error-${index}` },
       )));
     }
     expect(responses.every((item) => item.status !== 429)).toBe(true);
@@ -296,7 +297,7 @@ describe("POST /api/chat", () => {
   });
 
   it("returns a typed rate-limit error", async () => {
-    const headers = { "x-forwarded-for": "rate-limit-client" };
+    const headers = { "x-vercel-id": "rate-limit-client" };
     const first = await POST(request({ question: "Tell me about the projects." }, headers));
     await first.arrayBuffer();
     const second = await POST(request({ question: "Tell me about the projects." }, headers));
@@ -338,6 +339,31 @@ describe("POST /api/chat", () => {
     await reader?.cancel();
     await pending?.catch(() => undefined);
     expect(state.abort).toHaveBeenCalled();
+    await Promise.resolve();
+    expect(state.persistConversation).toHaveBeenCalledWith(expect.objectContaining({
+      event: expect.objectContaining({ errorCode: "cancelled", providerStatus: "cancelled" }),
+      messages: expect.arrayContaining([
+        expect.objectContaining({ role: "assistant", error: true, content: "Request cancelled" }),
+      ]),
+    }));
+  });
+
+  it("uses one bounded anonymous bucket instead of spoofed rotating forwarded headers", async () => {
+    const first = await POST(request({ question: "Tell me about the projects." }, {
+      "x-forwarded-for": "spoof-a",
+      "x-vercel-id": "",
+    }));
+    await first.arrayBuffer();
+    const second = await POST(request({ question: "Tell me about the projects." }, {
+      "x-forwarded-for": "spoof-b",
+      "x-vercel-id": "",
+    }));
+    await second.arrayBuffer();
+    const third = await POST(request({ question: "Tell me about the projects." }, {
+      "x-forwarded-for": "spoof-c",
+      "x-vercel-id": "",
+    }));
+    expect(third.status).toBe(429);
   });
 
   it("validates generated output and never emits a success-shaped unsafe fallback", async () => {
