@@ -12,7 +12,7 @@ const headers = {
 
 test.describe("chat API streaming smoke", () => {
   test("runs the route lifecycle with deterministic test providers", async ({ request }) => {
-    const response = await request.post("/api/chat", {
+    const response = await request.post("/api/chat/", {
       headers,
       data: { question: "What projects has Tarun built?" },
     });
@@ -23,7 +23,7 @@ test.describe("chat API streaming smoke", () => {
   });
 
   test("returns generic provider errors without leakage", async ({ request }) => {
-    const response = await request.post("/api/chat", {
+    const response = await request.post("/api/chat/", {
       headers,
       data: { question: "Tell me about portfolio provider error handling." },
     });
@@ -33,13 +33,13 @@ test.describe("chat API streaming smoke", () => {
   });
 
   test("validates origin and content type with security headers", async ({ request }) => {
-    const invalid = await request.post("/api/chat", {
+    const invalid = await request.post("/api/chat/", {
       headers: { "content-type": "text/plain", origin: "http://127.0.0.1:3000" },
       data: "{}",
     });
     expect(invalid.status()).toBe(415);
     expect(invalid.headers()["x-content-type-options"]).toBe("nosniff");
-    const forbidden = await request.post("/api/chat", {
+    const forbidden = await request.post("/api/chat/", {
       headers: { ...headers, origin: "http://attacker.test" },
       data: { question: "What projects has Tarun built?" },
     });
@@ -49,7 +49,7 @@ test.describe("chat API streaming smoke", () => {
   test("cancels a route stream through the browser request API", async ({ page }) => {
     const result = await page.evaluate(async () => {
       const controller = new AbortController();
-      const pending = fetch("/api/chat", {
+      const pending = fetch("/api/chat/", {
         method: "POST",
         headers: { "content-type": "application/json", origin: location.origin },
         body: JSON.stringify({ question: "Tell me about portfolio cancel stream handling." }),

@@ -15,7 +15,7 @@ export default defineConfig({
       CHAT_ALLOWED_ORIGINS: "http://127.0.0.1:3000",
       GEMINI_API_KEY: "test-only-gemini-key",
       GROQ_API_KEY: "test-only-groq-key",
-      DATABASE_URL: "postgresql://test:test@127.0.0.1:5432/test",
+      DATABASE_URL: "postgresql://127.0.0.1:5432/test",
       CHAT_ADMIN_SECRET: "test-only-admin-secret",
       CHAT_MODEL: "test-model",
       CHAT_EMBEDDING_MODEL: "test-embedding",
