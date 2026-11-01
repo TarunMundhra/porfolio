@@ -19,6 +19,7 @@ import {
 } from "@/lib/chat/security";
 import { createGeminiEmbedder, type GeminiEmbedder } from "@/lib/chat/providers/gemini";
 import { createGroqStreamer, type GroqStreamer } from "@/lib/chat/providers/groq";
+import { createSharedRateLimiter, type SharedRateLimiter } from "@/lib/chat/rate-limit";
 import type { Citation, StreamEvent } from "@/lib/chat/contracts";
 
 const encoder = new TextEncoder();
@@ -91,7 +92,7 @@ interface Runtime {
   embedder: GeminiEmbedder;
   streamer: GroqStreamer;
   analytics: ReturnType<typeof createAnalytics>;
-  rateLimiter: ReturnType<typeof createRateLimiter>;
+  rateLimiter: SharedRateLimiter;
   inFlight: ReturnType<typeof createInFlightCounter>;
 }
 
@@ -101,6 +102,7 @@ function getRuntime(): Runtime {
   if (runtime) return runtime;
   const config = parseChatConfig();
   if (process.env.CHAT_TEST_MODE === "1") {
+    const localRateLimiter = createRateLimiter({ limit: config.rateLimitPerMinute, windowMs: 60_000 });
     const chunk = {
       id: "test-project",
       sourceId: "test-project",
@@ -134,26 +136,56 @@ function getRuntime(): Runtime {
           persistConversation: async () => undefined,
         },
       }),
-      rateLimiter: createRateLimiter({ limit: 100, windowMs: 60_000 }),
+      rateLimiter: { allow: async (key) => localRateLimiter.allow(key) },
       inFlight: createInFlightCounter(16),
     };
     return runtime;
   }
   const sql = postgres(config.databaseUrl);
   const database = createChatDatabase(sql as never);
+  const rateLimiter = process.env.NODE_ENV === "test"
+    ? createRateLimiter({ limit: config.rateLimitPerMinute, windowMs: 60_000 })
+    : undefined;
   runtime = {
     config,
     database,
     embedder: createGeminiEmbedder(config),
     streamer: createGroqStreamer({ ...config, timeoutMs: 15_000 }),
     analytics: createAnalytics({ database }),
-    rateLimiter: createRateLimiter({
-      limit: config.rateLimitPerMinute,
-      windowMs: 60_000,
-    }),
+    rateLimiter: rateLimiter
+      ? { allow: async (key) => rateLimiter.allow(key) }
+      : createSharedRateLimiter({
+        sql: sql as never,
+        limit: config.rateLimitPerMinute,
+        windowMs: 60_000,
+      }),
     inFlight: createInFlightCounter(16),
   };
   return runtime;
+}
+
+function recordOutcome(
+  current: Runtime,
+  input: { question: string },
+  correlationId: string,
+  outcome: { answer?: string; refused?: boolean; error?: boolean; providerStatus?: string; errorCode?: string },
+): void {
+  void current.analytics.recordConversation(createRedactedConversationRecord({
+    conversationId: correlationId,
+    ownerId: "public",
+    retentionDays: current.config.analyticsRetentionDays,
+    messages: [
+      { role: "user", content: input.question },
+      ...(outcome.answer !== undefined
+        ? [{ role: "assistant" as const, content: outcome.answer, refused: outcome.refused, error: outcome.error }]
+        : []),
+    ],
+    event: {
+      correlationId,
+      providerStatus: outcome.providerStatus,
+      errorCode: outcome.errorCode,
+    },
+  }));
 }
 
 function eventBody(event: StreamEvent): ReadableStream<Uint8Array> {
@@ -274,7 +306,7 @@ export async function POST(request: Request): Promise<Response> {
     return errorResponse("invalid_request", 400, correlationId);
   }
 
-  if (!current.rateLimiter.allow(clientKey(request))) {
+  if (!(await current.rateLimiter.allow(clientKey(request)))) {
     return errorResponse("rate_limited", 429, correlationId);
   }
   if (!current.inFlight.tryAcquire()) {
@@ -288,6 +320,11 @@ export async function POST(request: Request): Promise<Response> {
   }
   if (assessment.kind === "refuse") {
     current.inFlight.release();
+    recordOutcome(current, input, correlationId, {
+      answer: "I can't help with that request.",
+      refused: true,
+      providerStatus: "refused",
+    });
     const body = new ReadableStream<Uint8Array>({
       start(controller) {
         controller.enqueue(encoder.encode(`${JSON.stringify({ type: "start", requestId: correlationId })}\n`));
@@ -299,6 +336,11 @@ export async function POST(request: Request): Promise<Response> {
   }
   if (assessment.kind !== "portfolio") {
     current.inFlight.release();
+    recordOutcome(current, input, correlationId, {
+      answer: "I can't help with that request.",
+      refused: true,
+      providerStatus: "refused",
+    });
     return errorResponse("refused", 200, correlationId);
   }
 
@@ -311,6 +353,12 @@ export async function POST(request: Request): Promise<Response> {
     });
   } catch {
     current.inFlight.release();
+    recordOutcome(current, input, correlationId, {
+      answer: "Unable to complete response",
+      error: true,
+      errorCode: "unavailable",
+      providerStatus: "retrieval",
+    });
     logFailure(correlationId, "retrieval", "unavailable");
     return errorResponse("unavailable", 503, correlationId);
   }
@@ -332,6 +380,12 @@ export async function POST(request: Request): Promise<Response> {
     prompt = buildGroundedPrompt(input.question, chunks);
   } catch {
     logFailure(correlationId, "stream_setup", "internal");
+    recordOutcome(current, input, correlationId, {
+      answer: "Unable to complete response",
+      error: true,
+      errorCode: "internal",
+      providerStatus: "validation",
+    });
     release();
     return errorResponse("internal", 500, correlationId);
   }
@@ -371,6 +425,12 @@ export async function POST(request: Request): Promise<Response> {
             void Promise.resolve(iterator.return?.()).catch(() => undefined);
             finished = true;
             logFailure(correlationId, "output_budget", "internal");
+            recordOutcome(current, input, correlationId, {
+              answer: "Unable to complete response",
+              error: true,
+              errorCode: "internal",
+              providerStatus: "output_budget",
+            });
             controller.enqueue(encoder.encode(`${JSON.stringify({ type: "error", code: "internal", message: "Unable to complete response", correlationId })}\n`));
             controller.close();
             release();
@@ -383,6 +443,12 @@ export async function POST(request: Request): Promise<Response> {
         const validated = validateAnswer(assembled, chunks);
         if (validated.kind === "fallback" && chunks.length) {
           finished = true;
+          recordOutcome(current, input, correlationId, {
+            answer: "Unable to complete response",
+            error: true,
+            errorCode: "internal",
+            providerStatus: "validation",
+          });
           controller.enqueue(encoder.encode(`${JSON.stringify({ type: "error", code: "internal", message: "Unable to complete response", correlationId })}\n`));
           controller.close();
           logFailure(correlationId, "validation", "internal");
@@ -396,19 +462,20 @@ export async function POST(request: Request): Promise<Response> {
         controller.close();
         finished = true;
         release();
-        void current.analytics.recordConversation(createRedactedConversationRecord({
-          conversationId: correlationId,
-          ownerId: clientKey(request),
-          retentionDays: current.config.analyticsRetentionDays,
-          messages: [
-            { role: "user", content: input.question },
-            { role: "assistant", content: validated.answer, error: false },
-          ],
-        }));
+        recordOutcome(current, input, correlationId, {
+          answer: validated.answer,
+          providerStatus: "success",
+        });
       } catch {
         if (finished) return;
         finished = true;
         logFailure(correlationId, "generation", "unavailable");
+        recordOutcome(current, input, correlationId, {
+          answer: "Provider unavailable",
+          error: true,
+          errorCode: "unavailable",
+          providerStatus: "provider",
+        });
         controller.enqueue(encoder.encode(`${JSON.stringify({ type: "error", code: "unavailable", message: "Provider unavailable", correlationId })}\n`));
         controller.close();
         release();

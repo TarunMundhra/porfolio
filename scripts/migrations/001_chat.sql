@@ -54,6 +54,12 @@ CREATE TABLE IF NOT EXISTS chat_events (
   created_at timestamptz NOT NULL DEFAULT now()
 );
 
+CREATE TABLE IF NOT EXISTS chat_rate_limits (
+  key text PRIMARY KEY,
+  window_started_at timestamptz NOT NULL,
+  request_count integer NOT NULL CHECK (request_count > 0)
+);
+
 CREATE INDEX IF NOT EXISTS chat_index_versions_active_idx ON chat_index_versions (status) WHERE status = 'active';
 CREATE UNIQUE INDEX IF NOT EXISTS chat_index_versions_one_active_idx
   ON chat_index_versions (status) WHERE status = 'active';

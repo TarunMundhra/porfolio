@@ -20,6 +20,12 @@ export interface RedactedConversationRecord {
   createdAt: string;
   messages: ReadonlyArray<RedactedMessageRecord>;
   expiresAt: string;
+  event?: {
+    correlationId: string;
+    providerStatus?: string;
+    errorCode?: string;
+    latencyMs?: number;
+  };
 }
 
 export interface ChatDatabase {
@@ -98,6 +104,13 @@ export function createChatDatabase(sql: Query, dbOptions: ChatDatabaseOptions = 
               VALUES (${record.conversationId}, ${index}, ${message.role}, ${message.content},
                       ${message.refused ?? false}, ${message.error ?? false},
                       ${message.inputTokens ?? null}, ${message.outputTokens ?? null})
+            `;
+          }
+          if (record.event) {
+            await transaction`
+              INSERT INTO chat_events (conversation_id, correlation_id, latency_ms, provider_status, error_code)
+              VALUES (${record.conversationId}, ${record.event.correlationId}, ${record.event.latencyMs ?? null},
+                      ${record.event.providerStatus ?? null}, ${record.event.errorCode ?? null})
             `;
           }
         });

@@ -8,6 +8,12 @@ export interface RedactedConversationRecord {
   createdAt: string;
   messages: ReadonlyArray<RedactedMessageRecord>;
   expiresAt: string;
+  event?: {
+    correlationId: string;
+    providerStatus?: string;
+    errorCode?: string;
+    latencyMs?: number;
+  };
 }
 
 export function createRedactedConversationRecord(input: {
@@ -16,6 +22,7 @@ export function createRedactedConversationRecord(input: {
   messages: ReadonlyArray<Omit<RedactedMessageRecord, "content"> & { content: string }>;
   now?: Date;
   retentionDays?: number;
+  event?: RedactedConversationRecord["event"];
 }): RedactedConversationRecord {
   const now = input.now ?? new Date();
   const expiresAt = new Date(now.getTime() + (input.retentionDays ?? 30) * 86_400_000);
@@ -25,6 +32,7 @@ export function createRedactedConversationRecord(input: {
     createdAt: now.toISOString(),
     expiresAt: expiresAt.toISOString(),
     messages: input.messages.map((message) => ({ ...message, content: redactForAnalytics(message.content) })),
+    event: input.event,
   };
 }
 

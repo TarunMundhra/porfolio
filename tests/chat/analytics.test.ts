@@ -15,10 +15,12 @@ describe("chat persistence and analytics", () => {
       conversationId: "conversation-1",
       ownerId: "owner-1",
       messages: [{ role: "user", content: "email me at me@example.com" }],
+      event: { correlationId: "event-1", providerStatus: "refused" },
     });
 
     expect(record.messages[0]?.content).not.toContain("me@example.com");
     expect(record.messages[0]?.content).toContain("[REDACTED]");
+    expect(record.event).toEqual({ correlationId: "event-1", providerStatus: "refused" });
     expect(record).toHaveProperty("createdAt");
   });
 
@@ -55,7 +57,7 @@ describe("chat persistence and analytics", () => {
   it("migration defines vector tables, active/source/similarity indexes, and retention deletion", async () => {
     const migration = await readFile(resolve(process.cwd(), "scripts/migrations/001_chat.sql"), "utf8");
     expect(migration).toMatch(/CREATE EXTENSION IF NOT EXISTS vector/i);
-    for (const table of ["chat_index_versions", "chat_chunks", "chat_conversations", "chat_messages", "chat_events"]) {
+    for (const table of ["chat_index_versions", "chat_chunks", "chat_conversations", "chat_messages", "chat_events", "chat_rate_limits"]) {
       expect(migration).toMatch(new RegExp(`CREATE TABLE[\\s\\S]*${table}`, "i"));
     }
     expect(migration).toMatch(/retention|DELETE FROM chat_messages/i);

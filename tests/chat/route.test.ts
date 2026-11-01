@@ -59,6 +59,7 @@ vi.mock("@/lib/chat/db", () => ({
 }));
 
 vi.mock("@/lib/chat/analytics", () => ({
+  createRedactedConversationRecord: (input: unknown) => input,
   createAnalytics: () => ({ recordConversation: state.persistConversation }),
 }));
 
@@ -272,6 +273,13 @@ describe("POST /api/chat", () => {
       expect.objectContaining({ type: "error", code: "refused" }),
     ]);
     expect(state.embed).not.toHaveBeenCalled();
+    await Promise.resolve();
+    expect(state.persistConversation).toHaveBeenCalledWith(expect.objectContaining({
+      event: expect.objectContaining({ providerStatus: "refused" }),
+      messages: expect.arrayContaining([
+        expect.objectContaining({ role: "assistant", refused: true }),
+      ]),
+    }));
   });
 
   it("streams a grounded insufficient-information response without calling providers when evidence is absent", async () => {
