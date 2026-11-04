@@ -96,6 +96,9 @@ export default function PortfolioAssistant() {
   const send = async (value = question) => {
     const trimmed = value.trim();
     if (!trimmed || busy) return;
+    const startedAt = performance.now();
+    let firstResponseByteAt: number | undefined;
+    let firstTokenAt: number | undefined;
     lastQuestionRef.current = trimmed;
     setQuestion("");
     setError("");
@@ -112,11 +115,16 @@ export default function PortfolioAssistant() {
     abortRef.current = controller;
     activeRequestRef.current = { id: requestId, assistantId, controller };
     try {
+      console.info("[chat] prompt_sent");
       const response = await fetch("/api/chat", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ question: trimmed }),
         signal: controller.signal,
+      });
+      firstResponseByteAt = performance.now();
+      console.info("[chat] first_response_byte", {
+        elapsedMs: Math.round(firstResponseByteAt - startedAt),
       });
       if (!response.ok || !response.body) throw new Error("request failed");
       const reader = response.body.getReader();
@@ -143,6 +151,12 @@ export default function PortfolioAssistant() {
             continue;
           }
           if (event.type === "token" && typeof event.value === "string") {
+            if (firstTokenAt === undefined) {
+              firstTokenAt = performance.now();
+              console.info("[chat] first_token", {
+                elapsedMs: Math.round(firstTokenAt - startedAt),
+              });
+            }
             setMessages((current) =>
               current.map((message) =>
                 message.id === assistantId ? { ...message, content: message.content + event.value } : message,
@@ -159,6 +173,13 @@ export default function PortfolioAssistant() {
           } else if (event.type === "error") {
             throw new Error("assistant error");
           } else if (event.type === "done") {
+            console.info("[chat] completed", {
+              elapsedMs: Math.round(performance.now() - startedAt),
+              timeToFirstResponseByteMs: firstResponseByteAt
+                ? Math.round(firstResponseByteAt - startedAt)
+                : null,
+              timeToFirstTokenMs: firstTokenAt ? Math.round(firstTokenAt - startedAt) : null,
+            });
             complete = true;
           }
         }
