@@ -2,7 +2,7 @@
 
 import { motion } from "framer-motion";
 import { useNavStore } from "@/store/useNavStore";
-import { FileDown, ChevronDown } from "lucide-react";
+import { FileDown, ChevronDown, ShieldCheck } from "lucide-react";
 import Image from "next/image";
 
 export default function HeroSection() {
@@ -73,11 +73,19 @@ export default function HeroSection() {
           </button>
           <a
             href="/Tarun-Mundhra-Resume.pdf"
-            download="Tarun-Mundhra-Resume.pdf"
+            target="_blank"
+            rel="noopener noreferrer"
             className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl border border-[#11998e]/40 text-[#e5e7eb] text-sm font-medium transition-all hover:bg-[#11998e]/10 hover:border-[#11998e]/70 hover:-translate-y-0.5 active:translate-y-0"
           >
             <FileDown size={16} />
             Resume
+          </a>
+          <a
+            href="/documents/"
+            className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl border border-white/[0.1] bg-white/[0.04] text-[#e5e7eb] text-sm font-medium transition-all hover:bg-white/[0.08] hover:border-[#22c55e]/50 hover:-translate-y-0.5 active:translate-y-0"
+          >
+            <ShieldCheck size={16} className="text-[#22c55e]" />
+            Documents &amp; Certificates
           </a>
         </motion.div>
 

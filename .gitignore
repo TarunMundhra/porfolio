@@ -1,6 +1,7 @@
 # dependencies
 node_modules/
-.worktrees//
+.worktrees/
+graphify-out/
 
 # build output
 .next/

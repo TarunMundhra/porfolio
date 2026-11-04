@@ -1,2 +1,10 @@
 https://tarun-mundhra.netlify.app/* https://tarunmundhra.tech/:splat 301!
 http://tarun-mundhra.netlify.app/* https://tarunmundhra.tech/:splat 301!
+
+# Direct document shortcuts
+/cv /Tarun-Mundhra-Resume.pdf 302
+/resume /Tarun-Mundhra-Resume.pdf 302
+/quick-dry-cleaning /quick-dry-cleaning-internship.pdf 302
+/dc-web /dc-web-services-internship.pdf 302
+/amrr /amrr-techsols-internship.pdf 302
+/amrr-techsols /amrr-techsols-internship.pdf 302
