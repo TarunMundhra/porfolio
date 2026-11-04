@@ -122,10 +122,6 @@ export default function PortfolioAssistant() {
         body: JSON.stringify({ question: trimmed }),
         signal: controller.signal,
       });
-      firstResponseByteAt = performance.now();
-      console.info("[chat] first_response_byte", {
-        elapsedMs: Math.round(firstResponseByteAt - startedAt),
-      });
       if (!response.ok || !response.body) throw new Error("request failed");
       const reader = response.body.getReader();
       if (activeRequestRef.current?.id !== requestId || controller.signal.aborted) {
@@ -138,6 +134,12 @@ export default function PortfolioAssistant() {
       let complete = false;
       while (!complete) {
         const { value: chunk, done } = await reader.read();
+        if (firstResponseByteAt === undefined && chunk && chunk.byteLength > 0) {
+          firstResponseByteAt = performance.now();
+          console.info("[chat] first_response_byte", {
+            elapsedMs: Math.round(firstResponseByteAt - startedAt),
+          });
+        }
         buffer += decoder.decode(chunk ?? new Uint8Array(), { stream: !done });
         const lines = buffer.split("\n");
         buffer = lines.pop() ?? "";
