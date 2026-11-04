@@ -90,6 +90,38 @@ describe("PortfolioAssistant", () => {
     log.mockRestore();
   });
 
+  it("logs first_token only for a non-empty token value", async () => {
+    let enqueue!: (chunk: Uint8Array) => void;
+    const stream = new ReadableStream<Uint8Array>({
+      start(controller) {
+        enqueue = (chunk) => controller.enqueue(chunk);
+      },
+    });
+    const log = vi.spyOn(console, "info").mockImplementation(() => undefined);
+    vi.spyOn(global, "fetch").mockResolvedValue(new Response(stream));
+
+    render(React.createElement(PortfolioAssistant));
+    fireEvent.click(screen.getByRole("button", { name: /ask about tarun/i }));
+    fireEvent.change(screen.getByRole("textbox", { name: /question/i }), {
+      target: { value: "Tell me about projects" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /send question/i }));
+
+    await waitFor(() => expect(log).toHaveBeenCalledWith("[chat] prompt_sent"));
+    enqueue(new TextEncoder().encode(`${JSON.stringify({ type: "token", value: "" })}\n`));
+    await waitFor(() => expect(log).toHaveBeenCalledWith("[chat] first_response_byte", expect.anything()));
+    expect(log).not.toHaveBeenCalledWith("[chat] first_token", expect.anything());
+
+    enqueue(
+      new TextEncoder().encode(
+        `${JSON.stringify({ type: "token", value: "Answer" })}\n${JSON.stringify({ type: "done" })}\n`,
+      ),
+    );
+    await waitFor(() => expect(screen.getByText("Answer")).toBeInTheDocument());
+    expect(log).toHaveBeenCalledWith("[chat] first_token", expect.anything());
+    expect(log.mock.calls.filter(([event]) => event === "[chat] first_token")).toHaveLength(1);
+  });
+
   it("stops an in-flight response without an error and preserves partial content", async () => {
     let resolveRequest!: (response: Response) => void;
     vi.spyOn(global, "fetch").mockReturnValue(new Promise((resolve) => { resolveRequest = resolve; }));

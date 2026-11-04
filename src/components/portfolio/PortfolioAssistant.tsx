@@ -153,7 +153,7 @@ export default function PortfolioAssistant() {
             continue;
           }
           if (event.type === "token" && typeof event.value === "string") {
-            if (firstTokenAt === undefined) {
+            if (firstTokenAt === undefined && event.value.length > 0) {
               firstTokenAt = performance.now();
               console.info("[chat] first_token", {
                 elapsedMs: Math.round(firstTokenAt - startedAt),
