@@ -244,6 +244,22 @@ function logFailure(correlationId: string, stage: string, code: string): void {
   }
 }
 
+function logTiming(
+  correlationId: string,
+  stage: "retrieval_completed" | "first_token" | "completed",
+  startedAt: number,
+): void {
+  try {
+    console.info(JSON.stringify({
+      correlationId,
+      stage,
+      elapsedMs: Math.max(0, Date.now() - startedAt),
+    }));
+  } catch {
+    // Logging must never affect the response.
+  }
+}
+
 function clientKey(request: Request): string {
   const configuredHeader = getRuntime().config.trustedIdentityHeader;
   if (!configuredHeader || !/^[a-z0-9!#$%&'*+.^_`|~-]+$/.test(configuredHeader)) return "anonymous";
@@ -268,6 +284,7 @@ function citationsFor(chunks: ReadonlyArray<{
 
 export async function POST(request: Request): Promise<Response> {
   const correlationId = createCorrelationId();
+  const startedAt = Date.now();
   let current: Runtime;
   try {
     current = getRuntime();
@@ -355,6 +372,7 @@ export async function POST(request: Request): Promise<Response> {
       limit: 6,
       minimumSimilarity: 0.65,
     });
+    logTiming(correlationId, "retrieval_completed", startedAt);
   } catch {
     current.inFlight.release();
     recordOutcome(current, input, correlationId, {
@@ -409,11 +427,13 @@ export async function POST(request: Request): Promise<Response> {
           if (!started) {
             started = true;
             assembled = "I don't have that information.";
+            logTiming(correlationId, "first_token", startedAt);
             controller.enqueue(encoder.encode(`${JSON.stringify({ type: "token", value: assembled })}\n`));
           }
           controller.enqueue(encoder.encode(`${JSON.stringify({ type: "done", requestId: correlationId })}\n`));
           controller.close();
           finished = true;
+          logTiming(correlationId, "completed", startedAt);
           release();
           return;
         }
@@ -441,6 +461,10 @@ export async function POST(request: Request): Promise<Response> {
             return;
           }
           assembled += next.value;
+          if (!started) {
+            started = true;
+            logTiming(correlationId, "first_token", startedAt);
+          }
           controller.enqueue(encoder.encode(`${JSON.stringify({ type: "token", value: redactForAnalytics(next.value) })}\n`));
           return;
         }
@@ -465,6 +489,7 @@ export async function POST(request: Request): Promise<Response> {
         controller.enqueue(encoder.encode(`${JSON.stringify({ type: "done", requestId: correlationId })}\n`));
         controller.close();
         finished = true;
+        logTiming(correlationId, "completed", startedAt);
         release();
         recordOutcome(current, input, correlationId, {
           answer: validated.answer,

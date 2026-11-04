@@ -126,6 +126,35 @@ describe("POST /api/chat", () => {
     expect(output).not.toContainEqual(expect.objectContaining({ value: "gemini-secret" }));
   });
 
+  it("emits privacy-safe timing logs for streamed and no-chunks completions", async () => {
+    const log = vi.spyOn(console, "info").mockImplementation(() => undefined);
+
+    await events(await POST(request({ question: "Tell me about the projects." })));
+    state.chunks = [];
+    await events(await POST(request(
+      { question: "Tell me about the projects." },
+      { "x-vercel-id": "timing-fallback-client" },
+    )));
+
+    const entries = log.mock.calls.map(([value]) => JSON.parse(String(value)) as Record<string, unknown>);
+    expect(entries).toHaveLength(6);
+    for (const entry of entries) {
+      expect(Object.keys(entry).sort()).toEqual(["correlationId", "elapsedMs", "stage"]);
+      expect(typeof entry.correlationId).toBe("string");
+      expect(typeof entry.elapsedMs).toBe("number");
+      expect(entry.elapsedMs).toBeGreaterThanOrEqual(0);
+    }
+    expect(entries.map((entry) => entry.stage)).toEqual([
+      "retrieval_completed",
+      "first_token",
+      "completed",
+      "retrieval_completed",
+      "first_token",
+      "completed",
+    ]);
+    log.mockRestore();
+  });
+
   it.each(["application/jsonfoo", "application/json-malicious", "text/json"])(
     "rejects non-exact JSON content type %s",
     async (contentType) => {
