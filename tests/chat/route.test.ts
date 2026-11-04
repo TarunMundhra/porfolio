@@ -155,6 +155,29 @@ describe("POST /api/chat", () => {
     log.mockRestore();
   });
 
+  it("logs first_token after an empty initial provider delta", async () => {
+    const log = vi.spyOn(console, "info").mockImplementation(() => undefined);
+    const now = vi.spyOn(performance, "now")
+      .mockReturnValueOnce(100)
+      .mockReturnValueOnce(110)
+      .mockReturnValueOnce(120)
+      .mockReturnValueOnce(150)
+      .mockReturnValueOnce(160);
+    state.deltas = ["", "Tarun built it.", " [1]"];
+
+    await events(await POST(request({ question: "Tell me about the projects." })));
+
+    const entries = log.mock.calls.map(([value]) => JSON.parse(String(value)) as Record<string, unknown>);
+    expect(entries.map((entry) => entry.stage)).toEqual([
+      "retrieval_completed",
+      "first_token",
+      "completed",
+    ]);
+    expect(entries[1].elapsedMs).toBe(20);
+    now.mockRestore();
+    log.mockRestore();
+  });
+
   it.each(["application/jsonfoo", "application/json-malicious", "text/json"])(
     "rejects non-exact JSON content type %s",
     async (contentType) => {

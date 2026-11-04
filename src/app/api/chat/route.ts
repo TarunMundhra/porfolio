@@ -253,7 +253,7 @@ function logTiming(
     console.info(JSON.stringify({
       correlationId,
       stage,
-      elapsedMs: Math.max(0, Date.now() - startedAt),
+      elapsedMs: Math.max(0, performance.now() - startedAt),
     }));
   } catch {
     // Logging must never affect the response.
@@ -284,7 +284,7 @@ function citationsFor(chunks: ReadonlyArray<{
 
 export async function POST(request: Request): Promise<Response> {
   const correlationId = createCorrelationId();
-  const startedAt = Date.now();
+  const startedAt = performance.now();
   let current: Runtime;
   try {
     current = getRuntime();
@@ -461,7 +461,7 @@ export async function POST(request: Request): Promise<Response> {
             return;
           }
           assembled += next.value;
-          if (!started) {
+          if (!started && next.value.length > 0) {
             started = true;
             logTiming(correlationId, "first_token", startedAt);
           }
