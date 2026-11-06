@@ -19,7 +19,7 @@ export function assessQuestion(question: string): QuestionAssessment {
   if (/(bomb|weapon|malware|exploit|harm|self[- ]harm|kill|credential theft)/i.test(normalized)) {
     return { kind: "unsafe", reason: "unrelated" };
   }
-  if (/(tarun|portfolio|project|resume|experience|skill|work|contact|about|built|career)/i.test(normalized)) {
+  if (/(tarun|portfolio|project|resume|experience|skill|work|contact|about|built|career|education|study|college|university|degree|iit|kharagpur|tech|stack|hi|hello|hey|greetings|help|who are you|what can you do|what do you know)/i.test(normalized)) {
     return { kind: "portfolio" };
   }
   return { kind: "unsafe", reason: "unrelated" };
@@ -57,21 +57,15 @@ type AnswerEvidence = Pick<RetrievedChunk, "id" | "text"> &
   Partial<Pick<RetrievedChunk, "title" | "url">>;
 
 export function validateAnswer(answer: string, evidence: ReadonlyArray<AnswerEvidence>): AnswerValidation {
-  const normalized = answer.trim();
+  const normalized = answer.replace(/【(\d+)(?:†[^】]*)?】/g, "[$1]").trim();
   const citationMatches = [...normalized.matchAll(/\[([^\]]+)\]/g)];
   const uncitedBrackets = /[\[\]]/.test(normalized.replace(/\[[^\]]+\]/g, ""));
-  const citedNumbers = citationMatches.map((match) => match[1].trim());
+  const citedNumbers = citationMatches.flatMap((match) => match[1].split(",").map((s) => s.trim()));
   const citedIds = citedNumbers.map((number) =>
     /^\d+$/.test(number) && Number(number) >= 1 && Number(number) <= evidence.length
       ? evidence[Number(number) - 1].id
       : undefined,
   );
-  const words = normalized
-    .replace(/\[[^\]]+\]/g, "")
-    .toLowerCase()
-    .match(/[a-z][a-z0-9-]{3,}/g) ?? [];
-  const evidenceWords = new Set(evidence.flatMap((item) => item.text.toLowerCase().match(/[a-z][a-z0-9-]{3,}/g) ?? []));
-  const unsupportedClaim = words.some((word) => !evidenceWords.has(word) && !["that", "this", "with", "from", "they", "their", "built", "has"].includes(word));
   if (
     !normalized ||
     normalized.length > MAX_ANSWER_CHARS ||
@@ -79,9 +73,9 @@ export function validateAnswer(answer: string, evidence: ReadonlyArray<AnswerEvi
     citationMatches.length === 0 ||
     uncitedBrackets ||
     citedIds.some((id) => id === undefined) ||
-    unsupportedClaim ||
+    /<[^>]+>|javascript:/i.test(normalized) ||
     /^i don't have that information\.?$/i.test(normalized) ||
-    /(sk[-_](?:live|test)|api[_-]?key\s*[:=]|bearer\s+[a-z0-9._~+/=-]{12,}|-----begin .* key-----)/i.test(normalized) ||
+    /(sk[-_](?:live|test)|(?:sk|pk|ghp|AIza)[-_]?[A-Za-z0-9_-]{10,}|(?:key|api[_-]?key|provider key|token|secret|password|opaque)\s*[:=]|bearer\s+[a-z0-9._~+/=-]{12,}|-----begin .* key-----)/i.test(normalized) ||
     /(how to (?:make|build) a (?:bomb|weapon)|malware|credential theft|kill yourself)/i.test(normalized)
   ) {
     return { kind: "fallback", answer: SAFE_FALLBACK };

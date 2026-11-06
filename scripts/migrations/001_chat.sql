@@ -21,7 +21,7 @@ CREATE TABLE IF NOT EXISTS chat_chunks (
   embedding_model text NOT NULL,
   chunk_ordinal integer,
   source_offset integer,
-  embedding vector NOT NULL
+  embedding vector(768) NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS chat_conversations (

@@ -39,7 +39,10 @@ describe("provider adapters", () => {
       [1, 2],
       [3, 4],
     ]);
-    expect(geminiEmbedContent).toHaveBeenNthCalledWith(1, "one");
+    expect(geminiEmbedContent).toHaveBeenNthCalledWith(1, {
+      content: { role: "user", parts: [{ text: "one" }] },
+      outputDimensionality: 768,
+    });
   });
 
   it("maps embedding failures to a typed generic error", async () => {
@@ -81,10 +84,12 @@ describe("provider adapters", () => {
         model: "qwen-2.5-32b",
         max_tokens: 42,
         stream: true,
+      }),
+      expect.objectContaining({
         signal: expect.any(AbortSignal),
       }),
     );
-    expect(groqCreate.mock.calls[0][0].signal).not.toBe(signal);
+    expect(groqCreate.mock.calls[0][1]?.signal).not.toBe(signal);
   });
 
   it("maps generation failures without returning provider details", async () => {
@@ -102,8 +107,8 @@ describe("provider adapters", () => {
 
   it("aborts a never-resolving request when the timeout expires", async () => {
     let requestSignal: AbortSignal | undefined;
-    groqCreate.mockImplementation((request: { signal: AbortSignal }) => {
-      requestSignal = request.signal;
+    groqCreate.mockImplementation((_request: unknown, options?: { signal?: AbortSignal }) => {
+      requestSignal = options?.signal;
       return new Promise(() => undefined);
     });
 

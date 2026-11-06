@@ -61,6 +61,42 @@ describe("PortfolioAssistant", () => {
     );
   });
 
+  it("deduplicates citations with identical URLs and titles without duplicate key warnings", async () => {
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const body = [
+      JSON.stringify({ type: "start", requestId: "req-dup" }),
+      JSON.stringify({ type: "token", value: "Answer text" }),
+      JSON.stringify({
+        type: "citation",
+        citation: { title: "Tarun Mundhra portfolio", url: "/" },
+      }),
+      JSON.stringify({
+        type: "citation",
+        citation: { title: "Tarun Mundhra portfolio", url: "/" },
+      }),
+      JSON.stringify({ type: "done", requestId: "req-dup" }),
+    ].join("\n");
+    vi.spyOn(global, "fetch").mockResolvedValue(
+      new Response(body, { headers: { "content-type": "application/x-ndjson" } }),
+    );
+
+    render(React.createElement(PortfolioAssistant));
+    fireEvent.click(screen.getByRole("button", { name: /ask about tarun/i }));
+    fireEvent.change(screen.getByRole("textbox", { name: /question/i }), {
+      target: { value: "Tell me about Tarun" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /send question/i }));
+
+    expect(await screen.findByText("Answer text")).toBeInTheDocument();
+    const links = screen.getAllByRole("link", { name: "Tarun Mundhra portfolio" });
+    expect(links).toHaveLength(1);
+    expect(errorSpy).not.toHaveBeenCalledWith(
+      expect.stringContaining("Encountered two children with the same key"),
+      expect.anything(),
+    );
+    errorSpy.mockRestore();
+  });
+
   it("logs first_response_byte when the first body chunk arrives", async () => {
     let enqueue!: (chunk: Uint8Array) => void;
     const stream = new ReadableStream<Uint8Array>({

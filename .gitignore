@@ -8,11 +8,13 @@ knowledge-index/
 .next/
 out/
 dist/
+*.tsbuildinfo
 
 # local env files
 .env
 !.env.example
-.env.*.local
+.env*.local
+.env.local
 
 # test output
 coverage/

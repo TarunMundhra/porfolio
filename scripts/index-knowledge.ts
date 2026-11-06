@@ -1,6 +1,7 @@
 import { readFile } from "node:fs/promises";
 import { createHash, randomUUID } from "node:crypto";
 import { resolve } from "node:path";
+import { loadEnvConfig } from "@next/env";
 import postgres from "postgres";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { PDFParse } from "pdf-parse";
@@ -37,7 +38,8 @@ export interface KnowledgeIndexTransaction {
 }
 
 const root = resolve(process.cwd());
-const embeddingModel = process.env.CHAT_EMBEDDING_MODEL ?? "text-embedding-004";
+loadEnvConfig(root);
+const embeddingModel = process.env.CHAT_EMBEDDING_MODEL ?? "gemini-embedding-001";
 
 export async function extractPdfText(buffer: Buffer): Promise<string> {
   const parser = new PDFParse({ data: buffer });
@@ -69,7 +71,11 @@ function createGeminiProvider(): EmbeddingProvider {
   const model = new GoogleGenerativeAI(apiKey).getGenerativeModel({ model: embeddingModel });
   return {
     async embed(text) {
-      const result = await model.embedContent(text);
+      const request = Object.assign(
+        { content: { role: "user" as const, parts: [{ text }] } },
+        { outputDimensionality: 768 },
+      );
+      const result = await model.embedContent(request);
       return result.embedding.values;
     },
   };

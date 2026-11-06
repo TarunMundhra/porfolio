@@ -10,7 +10,10 @@ interface GroqDelta {
 interface GroqClient {
   chat: {
     completions: {
-      create(options: Record<string, unknown>): Promise<AsyncIterable<GroqDelta>>;
+      create(
+        body: Record<string, unknown>,
+        options?: { signal?: AbortSignal },
+      ): Promise<AsyncIterable<GroqDelta>>;
     };
   };
 }
@@ -48,13 +51,17 @@ export function createGroqStreamer(
           throw new ChatProviderError("unavailable", "Generation provider unavailable");
         }
         const response = await Promise.race([
-          groq.chat.completions.create({
-          model: options.model,
-          messages: [{ role: "user", content: prompt }],
-          max_tokens: options.maxOutputTokens,
-          stream: true,
-          signal: timeoutController.signal,
-          }),
+          groq.chat.completions.create(
+            {
+              model: options.model,
+              messages: [{ role: "user", content: prompt }],
+              max_tokens: options.maxOutputTokens,
+              stream: true,
+            },
+            {
+              signal: timeoutController.signal,
+            },
+          ),
           new Promise<never>((_, reject) => {
             timeoutController.signal.addEventListener(
               "abort",

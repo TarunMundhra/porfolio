@@ -116,7 +116,7 @@ export default function PortfolioAssistant() {
     activeRequestRef.current = { id: requestId, assistantId, controller };
     try {
       console.info("[chat] prompt_sent");
-      const response = await fetch("/api/chat", {
+      const response = await fetch("/api/chat/", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ question: trimmed }),
@@ -146,7 +146,7 @@ export default function PortfolioAssistant() {
         for (const line of lines) {
           if (activeRequestRef.current?.id !== requestId || controller.signal.aborted) break;
           if (!line.trim()) continue;
-          let event: { type?: string; value?: string; message?: string; citation?: Citation };
+          let event: { type?: string; value?: string; message?: string; citation?: Citation; code?: string };
           try {
             event = JSON.parse(line) as typeof event;
           } catch {
@@ -173,6 +173,15 @@ export default function PortfolioAssistant() {
               ),
             );
           } else if (event.type === "error") {
+            if (event.code === "refused" && event.message) {
+              setMessages((current) =>
+                current.map((message) =>
+                  message.id === assistantId ? { ...message, content: event.message!, streaming: false } : message,
+                ),
+              );
+              complete = true;
+              break;
+            }
             throw new Error("assistant error");
           } else if (event.type === "done") {
             console.info("[chat] completed", {

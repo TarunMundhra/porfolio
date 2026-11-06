@@ -81,9 +81,21 @@ export default function AssistantMessage({
       {streaming && <span aria-label="Assistant is typing" className="ml-1 inline-block animate-pulse">▌</span>}
       {role === "assistant" && citations.length > 0 && (
         <div className="mt-2 flex flex-wrap gap-1.5 border-t border-white/10 pt-2">
-          {citations.filter((citation) => isApprovedUrl(citation.url)).map((citation) => (
-            <a
-              key={`${citation.url}-${citation.title}`}
+          {citations
+            .filter((citation) => isApprovedUrl(citation.url))
+            .filter(
+              (citation, index, list) =>
+                index ===
+                list.findIndex(
+                  (c) =>
+                    c.url === citation.url &&
+                    c.title === citation.title &&
+                    (c.section ?? "") === (citation.section ?? ""),
+                ),
+            )
+            .map((citation, index) => (
+              <a
+                key={`${citation.url}-${citation.title}-${citation.section ?? index}`}
               href={citation.url}
               target={citation.url.startsWith("http") ? "_blank" : undefined}
               rel={citation.url.startsWith("http") ? "noreferrer noopener" : undefined}

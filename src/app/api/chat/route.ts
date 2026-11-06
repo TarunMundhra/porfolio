@@ -226,7 +226,7 @@ function errorResponse(
       code === "rate_limited"
         ? "Too many requests"
         : code === "refused"
-          ? "I can't help with that request."
+          ? "I can only answer questions about Tarun's portfolio, background, and projects."
           : code === "invalid_request"
             ? "Invalid request"
             : code === "unavailable"
@@ -274,12 +274,21 @@ function citationsFor(chunks: ReadonlyArray<{
   url: string;
   section?: string;
 }>): Citation[] {
-  return chunks.map(({ sourceId, title, url, section }) => ({
-    sourceId,
-    title,
-    url,
-    ...(section ? { section } : {}),
-  }));
+  const seen = new Set<string>();
+  const citations: Citation[] = [];
+  for (const { sourceId, title, url, section } of chunks) {
+    const key = `${url}|${title}|${section ?? ""}`;
+    if (!seen.has(key)) {
+      seen.add(key);
+      citations.push({
+        sourceId,
+        title,
+        url,
+        ...(section ? { section } : {}),
+      });
+    }
+  }
+  return citations;
 }
 
 export async function POST(request: Request): Promise<Response> {
@@ -342,7 +351,7 @@ export async function POST(request: Request): Promise<Response> {
   if (assessment.kind === "refuse") {
     current.inFlight.release();
     recordOutcome(current, input, correlationId, {
-      answer: "I can't help with that request.",
+      answer: "I can only answer questions about Tarun's portfolio, background, and projects.",
       refused: true,
       providerStatus: "refused",
     });
@@ -358,7 +367,7 @@ export async function POST(request: Request): Promise<Response> {
   if (assessment.kind !== "portfolio") {
     current.inFlight.release();
     recordOutcome(current, input, correlationId, {
-      answer: "I can't help with that request.",
+      answer: "I can only answer questions about Tarun's portfolio, background, and projects.",
       refused: true,
       providerStatus: "refused",
     });
@@ -370,7 +379,7 @@ export async function POST(request: Request): Promise<Response> {
     const [embedding] = await current.embedder.embed([input.question]);
     chunks = await current.database.retrieveChunks(embedding, {
       limit: 6,
-      minimumSimilarity: 0.65,
+      minimumSimilarity: 0.55,
     });
     logTiming(correlationId, "retrieval_completed", startedAt);
   } catch {
@@ -469,7 +478,7 @@ export async function POST(request: Request): Promise<Response> {
           return;
         }
         const validated = validateAnswer(assembled, chunks);
-        if (validated.kind === "fallback" && chunks.length) {
+        if (validated.kind === "fallback" && chunks.length && !/^i (?:do not|don['’]t) have (?:that|information|enough)/i.test(assembled.trim())) {
           finished = true;
           recordOutcome(current, input, correlationId, {
             answer: "Unable to complete response",
@@ -483,7 +492,7 @@ export async function POST(request: Request): Promise<Response> {
           release();
           return;
         }
-        for (const citation of chunks.length ? citations : []) {
+        for (const citation of chunks.length && !/^i (?:do not|don['’]t) have (?:that|information|enough)/i.test(assembled.trim()) ? citations : []) {
           controller.enqueue(encoder.encode(`${JSON.stringify({ type: "citation", citation })}\n`));
         }
         controller.enqueue(encoder.encode(`${JSON.stringify({ type: "done", requestId: correlationId })}\n`));
