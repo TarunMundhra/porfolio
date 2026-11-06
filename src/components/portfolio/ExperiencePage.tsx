@@ -7,6 +7,8 @@ import {
   Calendar,
   Users,
   MonitorSmartphone,
+  ShieldCheck,
+  ArrowRight,
 } from "lucide-react";
 
 const staggerContainer = {
@@ -80,6 +82,34 @@ export default function ExperiencePage() {
           title="Positions of Responsibility"
           subtitle="Leadership roles at IIT Kharagpur"
         />
+      </motion.div>
+
+      {/* Verified Internship Documents Callout */}
+      <motion.div variants={fadeInUp} className="mb-8">
+        <GlassCard className="p-4 sm:p-5 border-[#11998e]/30 bg-[#11998e]/[0.06]">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex items-start sm:items-center gap-3">
+              <div className="p-2 rounded-xl bg-[#11998e]/20 text-[#22c55e] shrink-0">
+                <ShieldCheck size={20} />
+              </div>
+              <div>
+                <h3 className="text-sm font-semibold text-white">
+                  Looking for 2026 SDE Internships &amp; Verified Certificates?
+                </h3>
+                <p className="text-xs text-[#9ca3af]">
+                  Official letters from Quick Dry Cleaning Software (DC Web Services) &amp; AMRR TechSols, plus updated CV.
+                </p>
+              </div>
+            </div>
+            <a
+              href="/documents/"
+              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-gradient-to-r from-[#085d56] to-[#00998c] text-white text-xs font-medium hover:opacity-95 transition-all whitespace-nowrap self-start sm:self-auto"
+            >
+              <span>View Documents</span>
+              <ArrowRight size={14} />
+            </a>
+          </div>
+        </GlassCard>
       </motion.div>
 
       {/* Timeline */}
