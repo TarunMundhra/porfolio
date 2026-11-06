@@ -378,7 +378,7 @@ export async function POST(request: Request): Promise<Response> {
   try {
     const [embedding] = await current.embedder.embed([input.question]);
     chunks = await current.database.retrieveChunks(embedding, {
-      limit: 6,
+      limit: 8,
       minimumSimilarity: 0.55,
     });
     logTiming(correlationId, "retrieval_completed", startedAt);

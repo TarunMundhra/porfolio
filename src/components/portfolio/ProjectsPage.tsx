@@ -36,16 +36,45 @@ interface Project {
 
 const projects: Project[] = [
   {
+    title: "JuryAssist - Agentic AI Legal Platform",
+    emoji: "⚖️",
+    description:
+      "An agentic AI UK legal intelligence platform scaling to 10,294 active users with zero-knowledge privacy and multi-LLM consensus.",
+    highlights: [
+      "Spearheaded 0-to-1 architecture of an agentic AI UK legal platform, scaling adoption to 10,294 active users across top law firms",
+      "Built zero-knowledge AI platform with 6-LLM consensus, distributed state locking, and HMAC-verified idempotent payment webhooks",
+      "Integrated automated lexical overlap verification (Jaccard similarity thresholding) eliminating 100% of LLM hallucinated obligations",
+      "Cut contract ingestion latency from ~6 minutes down to under 20 seconds (>94% speedup) on 800+ page legal documents via bulk ONNX parallelization",
+    ],
+    tech: [
+      "TypeScript",
+      "Next.js",
+      "Node.js",
+      "PostgreSQL",
+      "6-LLM Consensus",
+      "Temporal.io",
+      "HMAC",
+      "ONNX",
+    ],
+    links: [
+      {
+        label: "Live Platform",
+        href: "https://juryassist.com",
+        tooltip: "Open platform",
+        kind: "demo",
+      },
+    ],
+  },
+  {
     title: "KGP Presence",
     emoji: "📱",
     description:
-      "An academic tracker mobile app for IIT Kharagpur with cross-platform React Native (Expo) and a serverless AWS Lambda backend.",
+      "An academic tracker mobile app for IIT Kharagpur deployed to the Google Play Store (100+ installs) with a serverless AWS Lambda backend.",
     highlights: [
-      "Architected a cross-platform attendance tracker using React Native (Expo) and AWS Lambda, driving the project from ideation to a preview build",
-      "Co-developed an OCR-powered timetable generator with a flexible manual creation mode",
+      "Shipped an Expo React Native app to Google Play Store (100+ installs) via EAS Build; deployed serverless AWS Lambda backend with automated GitHub Actions CI/CD",
+      "Co-developed an OCR-powered timetable generator with Gemini API and Sarvam STT voice controls with Groq LLM parsing",
       "Streamlined course integration via subject-code auto-fetch and an animated NativeWind UI",
       "Designed one-click attendance logging with real-time analytics by semester, subject, and timetable using TanStack Query",
-      "Built a dashboard with event-tracking notifications and voice controls via Sarvam STT and Groq API JSON parsing",
       "Secured the Node.js/Express backend with JWT, bcrypt, and OTP-based email verification",
     ],
     tech: [
@@ -77,6 +106,28 @@ const projects: Project[] = [
         kind: "code",
       },
     ],
+  },
+  {
+    title: "Low-Latency AI Video Streaming Engine",
+    emoji: "🎥",
+    description:
+      "A progressive AI video pipeline with Python, FastAPI, and FFmpeg, cutting TTFF latency by 7x (<3s) with dynamic PTS synchronization.",
+    highlights: [
+      "Architected progressive AI video pipeline, decoupling scene generation from live HLS chunk slicing to cut TTFF latency by 7x (<3s)",
+      "Engineered an async manifest holding pattern, eliminating client polling race conditions and severe FastAPI event-loop blocking",
+      "Implemented dynamic PTS timestamp synchronization across scene boundaries, preventing browser MSE decoder buffer stalls",
+      "Designed immutable storage and edge caching layer with tenant-scoped access policies, eliminating redundant cloud reads",
+    ],
+    tech: [
+      "Python",
+      "FastAPI",
+      "FFmpeg",
+      "HLS",
+      "Cloud Object Storage",
+      "Asyncio",
+      "Docker",
+    ],
+    links: [],
   },
   {
     title: "GigFlow",

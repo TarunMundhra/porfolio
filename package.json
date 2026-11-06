@@ -11,7 +11,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test tests/e2e",
-    "index:knowledge": "tsx scripts/index-knowledge.ts"
+    "index:knowledge": "node --dns-result-order=ipv4first --import tsx scripts/index-knowledge.ts"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",

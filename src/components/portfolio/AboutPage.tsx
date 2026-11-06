@@ -28,44 +28,70 @@ const fadeInUp = {
 
 const skills = {
   Languages: [
+    "TypeScript",
     "JavaScript",
     "Python",
+    "Go",
     "C++",
     "C",
+    "SQL",
     "HTML",
     "CSS",
-    "SQL",
   ],
   "Frameworks & Libraries": [
+    "NestJS",
     "Node.js",
     "Express.js",
     "React.js",
     "Next.js",
     "React Native (Expo)",
+    "FastAPI",
+    "ts-rest",
+    "LangChain",
     "Tailwind CSS",
     "NativeWind",
     "TanStack Query",
     "JWT",
   ],
-  Databases: [
+  "Databases & Storage": [
+    "PostgreSQL (RLS, pgvector)",
     "MongoDB",
-    "PostgreSQL",
+    "Redis",
+    "TimescaleDB",
+    "Kysely ORM",
+    "SQLite",
     "IndexedDB",
     "MySQL",
   ],
-  "Tools & Technologies": [
+  "Systems, DevOps & Tools": [
+    "Docker",
+    "Kubernetes",
+    "Temporal.io",
+    "Vitest",
+    "Centrifugo",
+    "BullMQ",
+    "pnpm",
+    "Turborepo",
     "Git",
-    "GitHub",
-    "RESTful APIs",
-    "Postman",
+    "GitHub Actions CI/CD",
     "AWS Lambda",
-    "Cloudinary",
-    "Multer",
-    "Service Workers",
+    "Kafka",
+    "HMAC",
+    "Postman",
   ],
 };
 
 const achievements = [
+  {
+    icon: <Award size={18} />,
+    title: "Google Play Store Deployment",
+    description: "Shipped KGP Presence mobile app to production with 100+ active installs",
+  },
+  {
+    icon: <Trophy size={18} />,
+    title: "Founding Engineer | JuryAssist",
+    description: "Architected 0-to-1 UK legal platform scaling to 10,294 active users",
+  },
   {
     icon: <Trophy size={18} />,
     title: "JEE Main 2023",
@@ -75,6 +101,11 @@ const achievements = [
     icon: <Award size={18} />,
     title: "JEE Advanced 2023",
     description: "Secured Top 6% among 200K candidates",
+  },
+  {
+    icon: <Trophy size={18} />,
+    title: "ET AI Hackathon 2.0 (Economic Times)",
+    description: "Shortlisted for Phase 2: Build Sprint among thousands of national participants",
   },
   {
     icon: <BookOpen size={18} />,

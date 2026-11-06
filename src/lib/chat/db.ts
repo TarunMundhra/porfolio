@@ -74,14 +74,24 @@ export function createChatDatabase(sql: Query, dbOptions: ChatDatabaseOptions = 
       try {
         const vector = `[${embedding.join(",")}]`;
         const rows = await sql`
-          SELECT c.id, c.source_id, c.title, c.url, c.section, c.text, c.content_hash,
-                 c.embedding_model, c.source_path, c.chunk_ordinal, c.source_offset,
-                 1 - (c.embedding <=> ${vector}::vector) AS similarity
-          FROM chat_chunks c
-          INNER JOIN chat_index_versions v ON v.id = c.version_id
-          WHERE v.status = 'active'
-            AND 1 - (c.embedding <=> ${vector}::vector) >= ${options.minimumSimilarity}
-          ORDER BY c.embedding <=> ${vector}::vector
+          WITH scored AS (
+            SELECT c.id, c.source_id, c.title, c.url, c.section, c.text, c.content_hash,
+                   c.embedding_model, c.source_path, c.chunk_ordinal, c.source_offset,
+                   1 - (c.embedding <=> ${vector}::vector) AS similarity,
+                   ROW_NUMBER() OVER (
+                     PARTITION BY c.source_id
+                     ORDER BY c.embedding <=> ${vector}::vector
+                   ) AS rank_in_source
+            FROM chat_chunks c
+            INNER JOIN chat_index_versions v ON v.id = c.version_id
+            WHERE v.status = 'active'
+              AND 1 - (c.embedding <=> ${vector}::vector) >= ${options.minimumSimilarity}
+          )
+          SELECT id, source_id, title, url, section, text, content_hash,
+                 embedding_model, source_path, chunk_ordinal, source_offset, similarity
+          FROM scored
+          WHERE rank_in_source <= 2
+          ORDER BY similarity DESC
           LIMIT ${options.limit}
         `;
         return rows.map(mapChunk);

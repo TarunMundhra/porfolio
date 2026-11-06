@@ -9,6 +9,9 @@ import {
   MonitorSmartphone,
   ShieldCheck,
   ArrowRight,
+  Briefcase,
+  Layers,
+  Sparkles,
 } from "lucide-react";
 
 const staggerContainer = {
@@ -39,31 +42,129 @@ interface Experience {
 
 const experiences: Experience[] = [
   {
+    title: "JuryAssist (Product by Veritos)",
+    organization: "Veritos | UK Legal Tech Platform",
+    role: "Founding Engineer",
+    period: "Aug 2026 – Present",
+    icon: <Sparkles size={22} />,
+    accentColor: "#22c55e",
+    description:
+      "Spearheaded 0-to-1 systems architecture of an agentic AI UK legal platform, scaling adoption to 10,294 active users across top law firms.",
+    highlights: [
+      "Spearheaded 0-to-1 architecture of an agentic AI UK legal platform, scaling adoption to 10,294 active users across top law firms.",
+      "Built zero-knowledge AI platform with 6-LLM consensus, distributed state locking & HMAC-verified idempotent payment webhooks.",
+      "Drove product-led growth strategy platform-wide, boosting user adoption and premium-tier conversions across the client base.",
+      "Eliminated 100% of LLM hallucinated obligations using an automated lexical overlap verification layer (Jaccard similarity thresholding) coupled with a zero-persistence PII tokenisation vault.",
+    ],
+    tech: [
+      "TypeScript",
+      "Next.js",
+      "Node.js",
+      "PostgreSQL",
+      "6-LLM Consensus",
+      "Temporal.io",
+      "HMAC",
+      "Distributed Systems",
+    ],
+    links: [],
+  },
+  {
+    title: "Quick Dry Cleaning Software (DC Web Services)",
+    organization: "DC Web Services Pvt. Ltd.",
+    role: "Software Development Engineer",
+    period: "May 2026 – Nov 2026",
+    icon: <Briefcase size={22} />,
+    accentColor: "#11998e",
+    description:
+      "Engineered core backend microservices, access control architectures, and high-performance event pipelines for an AI-first, multi-tenant B2B SaaS platform.",
+    highlights: [
+      "Re-architected the access control model from flat user-store mapping to hierarchical ReBAC, eliminating O(N) database record duplication across multi-store franchise expansions.",
+      "Authored 83 production commits (+15,300 lines of code) across 6 microservices, maintaining zero-regression security across tenant boundaries with PostgreSQL Row-Level Security (RLS).",
+      "Cut hot-path authorization latency to near-zero by implementing in-memory LRU/TTL permission caching.",
+      "Automated end-to-end type safety for 14+ granular permissions across API controllers via dynamic DB-driven TypeScript generation.",
+      "Achieved comprehensive test coverage for mission-critical security workflows (JWT validators, privilege escalation guards, and territory hierarchy queries) using Vitest.",
+      "Engineered real-time LiveKit voice AI agents with Temporal.io for fault-tolerant multi-step execution, and event-driven BullMQ/Redis worker queues.",
+    ],
+    tech: [
+      "TypeScript",
+      "NestJS",
+      "Node.js",
+      "PostgreSQL (RLS)",
+      "Kysely ORM",
+      "Temporal.io",
+      "Docker",
+      "Vitest",
+      "ts-rest",
+      "Centrifugo",
+      "pnpm",
+      "Turborepo",
+    ],
+    links: [],
+  },
+  {
+    title: "AMRR TechSols Pvt Ltd",
+    organization: "AMRR TechSols Pvt. Ltd.",
+    role: "Software Development Engineer",
+    period: "May 2026 – Jul 2026",
+    icon: <Layers size={22} />,
+    accentColor: "#38bdf8",
+    description:
+      "Built foundational AI risk engines, hybrid vector retrieval systems, and privacy-preserving document pipelines deployed at enterprise scale.",
+    highlights: [
+      "Cut contract ingestion latency from ~6 minutes down to under 20 seconds (>94% speedup) on 800+ page legal documents via bulk ONNX parallelization and batched vector upserts.",
+      "Architected hybrid semantic search with pgvector HNSW indexing and BM25 Reciprocal Rank Fusion (RRF), hitting sub-50ms retrieval latencies across large-scale document corpora.",
+      "Slashed vector calculation overhead by 4x and SQLite sync transactions by 90% by benchmarking and migrating to a 384-dimensional dense embedding model (BAAI/bge-small-en-v1.5).",
+      "Eliminated 100% of LLM hallucinated obligations using an automated lexical overlap verification layer (Jaccard similarity thresholding) coupled with a zero-persistence PII tokenisation vault.",
+      "Engineered end-to-end PII redaction pipeline with AES-256-GCM encryption, GDPR-ready architecture, and improved native document conversion quality by 70% with PyMuPDF.",
+    ],
+    tech: [
+      "Python",
+      "FastAPI",
+      "LangChain",
+      "PostgreSQL (pgvector)",
+      "BM25",
+      "ONNX",
+      "PyMuPDF",
+      "Docker",
+      "AES-256-GCM",
+    ],
+    links: [],
+  },
+  {
     title: "Interhall GC-OpenSoft Competition",
     organization: "MMM Hall of Residence | IIT Kharagpur",
-    role: "Vice-Captain",
+    role: "Vice-Captain & Engineering Lead",
     period: "2026",
     icon: <Users size={22} />,
-    accentColor: "#11998e",
+    accentColor: "#a855f7",
     description:
       "Led a 20-member cross-functional development team to design and deliver a full-stack, institutional-grade algorithmic trading simulator under competitive inter-hall conditions at IIT Kharagpur.",
     highlights: [
-      "Led a 20-member cross-functional development team",
-      "Delivered a full-stack, institutional-grade algorithmic trading simulator",
-      "Executed under competitive inter-hall conditions at IIT Kharagpur",
+      "Led a 20-member cross-functional development team to architect an institutional-grade algorithmic trading simulator.",
+      "Engineered deterministic matching engine in Go enforcing price-time priority with Self-Trade Prevention (STP).",
+      "Streamed real-time Level-2 order book depth via Go channels, Redis Pub/Sub, and WebSockets.",
     ],
-    tech: [],
+    tech: [
+      "Go",
+      "Redis",
+      "TimescaleDB",
+      "PostgreSQL",
+      "WebSockets",
+      "Docker",
+    ],
     links: [],
   },
   {
     title: "Hall Technical Committee",
     organization: "MMM Hall of Residence | IIT Kharagpur",
-    role: "Committee Member",
+    role: "Technical Committee Member",
     period: "2026",
     icon: <MonitorSmartphone size={22} />,
-    accentColor: "#22c55e",
-    description: "Hall Technical Committee 2026.",
-    highlights: ["Hall Technical Committee 2026"],
+    accentColor: "#eab308",
+    description: "Organizing technical hackathons, software infrastructure, and competitive engineering initiatives at IIT Kharagpur.",
+    highlights: [
+      "Directed technical development events and infrastructure for 1,500+ campus residents.",
+    ],
     tech: [],
     links: [],
   },
@@ -79,12 +180,12 @@ export default function ExperiencePage() {
     >
       <motion.div variants={fadeInUp}>
         <SectionHeading
-          title="Positions of Responsibility"
-          subtitle="Leadership roles at IIT Kharagpur"
+          title="Work Experience & Leadership"
+          subtitle="Production software engineering, architecture, and leadership"
         />
       </motion.div>
 
-      {/* Verified Internship Documents Callout */}
+      {/* Verified Experience & Documents Callout */}
       <motion.div variants={fadeInUp} className="mb-8">
         <GlassCard className="p-4 sm:p-5 border-[#11998e]/30 bg-[#11998e]/[0.06]">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -94,7 +195,7 @@ export default function ExperiencePage() {
               </div>
               <div>
                 <h3 className="text-sm font-semibold text-white">
-                  Looking for 2026 SDE Internships &amp; Verified Certificates?
+                  Verified Experience &amp; Engineering Credentials
                 </h3>
                 <p className="text-xs text-[#9ca3af]">
                   Official letters from Quick Dry Cleaning Software (DC Web Services) &amp; AMRR TechSols, plus updated CV.

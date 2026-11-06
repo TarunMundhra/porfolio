@@ -26,7 +26,7 @@ export default function HeroSection() {
               <span className="absolute inline-flex h-full w-full rounded-full bg-[#22c55e]/70 animate-ping" />
               <span className="relative inline-flex h-2 w-2 rounded-full bg-[#22c55e]" />
             </span>
-            Open to internships &amp; new projects
+            Available for Software Engineering (SDE / SWE) Roles
           </span>
         </motion.div>
 
@@ -55,8 +55,8 @@ export default function HeroSection() {
           animate={{ opacity: 1 }}
           transition={{ delay: 0.4, duration: 0.6 }}
         >
-          Building high-performance trading systems, scalable backend
-          architectures, and cross-platform applications as a Full-Stack Developer.
+          Software Development Engineer building high-throughput distributed systems,
+          scalable backend architectures, and AI-native platforms.
         </motion.h2>
 
         <motion.div
