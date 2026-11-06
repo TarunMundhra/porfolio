@@ -1,5 +1,7 @@
 import postgres from "postgres";
 
+export const dynamic = "force-dynamic";
+
 import { createAnalytics, createRedactedConversationRecord } from "@/lib/chat/analytics";
 import { parseChatConfig, type ChatConfig } from "@/lib/chat/config";
 import { createChatDatabase, type ChatDatabase } from "@/lib/chat/db";
@@ -207,7 +209,9 @@ function response(
     headers: {
       ...getSecurityHeaders(),
       "Content-Type": "application/x-ndjson; charset=utf-8",
-      "Cache-Control": "no-cache",
+      "Cache-Control": "no-cache, no-transform",
+      "X-Accel-Buffering": "no",
+      Connection: "keep-alive",
       ...extraHeaders,
     },
   });

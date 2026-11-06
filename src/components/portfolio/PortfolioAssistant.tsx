@@ -32,10 +32,24 @@ export default function PortfolioAssistant() {
   const openedRef = useRef(false);
   const activeRequestRef = useRef<{ id: number; assistantId: string; controller: AbortController } | null>(null);
   const generationRef = useRef(0);
+  const typewriterTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const targetTextRef = useRef("");
+  const displayedTextRef = useRef("");
+  const listRef = useRef<HTMLDivElement>(null);
+
+  const stopTypewriter = useCallback(() => {
+    if (typewriterTimerRef.current) {
+      clearInterval(typewriterTimerRef.current);
+      typewriterTimerRef.current = null;
+    }
+  }, []);
 
   const cleanupRequest = useCallback((requestId?: number) => {
     const active = activeRequestRef.current;
     if (!active || (requestId !== undefined && active.id !== requestId)) return;
+    stopTypewriter();
+    const finalContent = targetTextRef.current || displayedTextRef.current;
+    displayedTextRef.current = finalContent;
     active.controller.abort();
     if (readerRef.current?.requestId === active.id) {
       void readerRef.current.reader.cancel();
@@ -45,10 +59,18 @@ export default function PortfolioAssistant() {
     setBusy(false);
     setMessages((current) =>
       current.map((message) =>
-        message.id === active.assistantId ? { ...message, streaming: false } : message,
+        message.id === active.assistantId
+          ? { ...message, content: finalContent || message.content, streaming: false }
+          : message,
       ),
     );
-  }, []);
+  }, [stopTypewriter]);
+
+  useEffect(() => {
+    if (busy && listRef.current) {
+      listRef.current.scrollTop = listRef.current.scrollHeight;
+    }
+  }, [messages, busy]);
 
   useLayoutEffect(() => {
     if (open) {
@@ -85,7 +107,7 @@ export default function PortfolioAssistant() {
     };
     document.addEventListener("keydown", onKeyDown);
     return () => document.removeEventListener("keydown", onKeyDown);
-  }, [open]);
+  }, [open, cleanupRequest]);
 
   useEffect(() => () => cleanupRequest(), [cleanupRequest]);
 
@@ -102,6 +124,9 @@ export default function PortfolioAssistant() {
     lastQuestionRef.current = trimmed;
     setQuestion("");
     setError("");
+    stopTypewriter();
+    targetTextRef.current = "";
+    displayedTextRef.current = "";
     const userId = `${Date.now()}-user`;
     const assistantId = `${Date.now()}-assistant`;
     const requestId = ++generationRef.current;
@@ -111,6 +136,42 @@ export default function PortfolioAssistant() {
       { id: assistantId, role: "assistant", content: "", streaming: true },
     ]);
     setBusy(true);
+
+    const flushTypewriter = () => {
+      const target = targetTextRef.current;
+      displayedTextRef.current = target;
+      setMessages((current) =>
+        current.map((message) =>
+          message.id === assistantId ? { ...message, content: target } : message,
+        ),
+      );
+    };
+
+    const advanceTypewriter = () => {
+      const target = targetTextRef.current;
+      const current = displayedTextRef.current;
+      if (current.length < target.length) {
+        const remaining = target.length - current.length;
+        const charsToAdd =
+          remaining > 100
+            ? Math.ceil(remaining / 6)
+            : remaining > 40
+              ? 4
+              : remaining > 15
+                ? 2
+                : 1;
+        const next = target.slice(0, current.length + charsToAdd);
+        displayedTextRef.current = next;
+        setMessages((msgs) =>
+          msgs.map((message) =>
+            message.id === assistantId ? { ...message, content: next } : message,
+          ),
+        );
+      }
+    };
+
+    typewriterTimerRef.current = setInterval(advanceTypewriter, 16);
+
     const controller = new AbortController();
     abortRef.current = controller;
     activeRequestRef.current = { id: requestId, assistantId, controller };
@@ -159,11 +220,8 @@ export default function PortfolioAssistant() {
                 elapsedMs: Math.round(firstTokenAt - startedAt),
               });
             }
-            setMessages((current) =>
-              current.map((message) =>
-                message.id === assistantId ? { ...message, content: message.content + event.value } : message,
-              ),
-            );
+            targetTextRef.current += event.value;
+            advanceTypewriter();
           } else if (event.type === "citation" && event.citation) {
             setMessages((current) =>
               current.map((message) =>
@@ -173,7 +231,10 @@ export default function PortfolioAssistant() {
               ),
             );
           } else if (event.type === "error") {
+            stopTypewriter();
             if (event.code === "refused" && event.message) {
+              targetTextRef.current = event.message;
+              displayedTextRef.current = event.message;
               setMessages((current) =>
                 current.map((message) =>
                   message.id === assistantId ? { ...message, content: event.message!, streaming: false } : message,
@@ -184,6 +245,13 @@ export default function PortfolioAssistant() {
             }
             throw new Error("assistant error");
           } else if (event.type === "done") {
+            stopTypewriter();
+            flushTypewriter();
+            setMessages((current) =>
+              current.map((message) =>
+                message.id === assistantId ? { ...message, streaming: false } : message,
+              ),
+            );
             console.info("[chat] completed", {
               elapsedMs: Math.round(performance.now() - startedAt),
               timeToFirstResponseByteMs: firstResponseByteAt
@@ -197,6 +265,7 @@ export default function PortfolioAssistant() {
         if (done || activeRequestRef.current?.id !== requestId || controller.signal.aborted) complete = true;
       }
     } catch {
+      stopTypewriter();
       if (!controller.signal.aborted && activeRequestRef.current?.id === requestId) {
         setError(safeError());
         setMessages((current) =>
@@ -206,7 +275,9 @@ export default function PortfolioAssistant() {
         );
       }
     } finally {
+      stopTypewriter();
       if (activeRequestRef.current?.id === requestId) {
+        flushTypewriter();
         setMessages((current) =>
           current.map((message) => (message.id === assistantId ? { ...message, streaming: false } : message)),
         );
@@ -251,7 +322,7 @@ export default function PortfolioAssistant() {
               </div>
               <button type="button" onClick={() => { cleanupRequest(); setOpen(false); }} aria-label="Close assistant" className="rounded-lg px-2 py-1 text-xl text-slate-300 hover:bg-white/10">×</button>
             </header>
-            <div className="mt-4 flex-1 space-y-3 overflow-y-auto pr-1" aria-live="polite">
+            <div ref={listRef} className="mt-4 flex-1 space-y-3 overflow-y-auto pr-1" aria-live="polite">
               {messages.length === 0 && (
                 <div className="space-y-2">
                   <p className="text-xs text-slate-400">Try a question:</p>
