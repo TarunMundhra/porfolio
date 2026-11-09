@@ -22,12 +22,18 @@ import {
 import { createGeminiEmbedder, type GeminiEmbedder } from "@/lib/chat/providers/gemini";
 import { createGroqStreamer, type GroqStreamer } from "@/lib/chat/providers/groq";
 import { createSharedRateLimiter, type SharedRateLimiter } from "@/lib/chat/rate-limit";
+import {
+  getCandidateProfileFallbackChunks,
+  isCandidateProfileQuery,
+} from "@/lib/chat/retrieval";
 import type { Citation, StreamEvent } from "@/lib/chat/contracts";
 
 const encoder = new TextEncoder();
 const MAX_BODY_BYTES = 32_000;
 const MAX_OUTPUT_CHARS = 10_000;
 const MAX_OUTPUT_BYTES = 40_000;
+const DEFLECTION_MESSAGE =
+  "I don't track or focus on personal details like gender—my role is to represent Tarun's professional work, software engineering background, and technical projects. I'd be glad to tell you about his experience building distributed systems, his legal tech platform, or his project portfolio!";
 
 class RequestBodyTooLargeError extends Error {}
 
@@ -368,6 +374,23 @@ export async function POST(request: Request): Promise<Response> {
     });
     return response(body, 200);
   }
+  if (assessment.kind === "deflect") {
+    current.inFlight.release();
+    recordOutcome(current, input, correlationId, {
+      answer: DEFLECTION_MESSAGE,
+      refused: false,
+      providerStatus: "deflected",
+    });
+    const body = new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(encoder.encode(`${JSON.stringify({ type: "start", requestId: correlationId })}\n`));
+        controller.enqueue(encoder.encode(`${JSON.stringify({ type: "token", value: DEFLECTION_MESSAGE })}\n`));
+        controller.enqueue(encoder.encode(`${JSON.stringify({ type: "done", requestId: correlationId })}\n`));
+        controller.close();
+      },
+    });
+    return response(body, 200);
+  }
   if (assessment.kind !== "portfolio") {
     current.inFlight.release();
     recordOutcome(current, input, correlationId, {
@@ -396,6 +419,10 @@ export async function POST(request: Request): Promise<Response> {
     });
     logFailure(correlationId, "retrieval", "unavailable");
     return errorResponse("unavailable", 503, correlationId);
+  }
+
+  if ((!chunks || chunks.length === 0) && isCandidateProfileQuery(input.question)) {
+    chunks = getCandidateProfileFallbackChunks();
   }
 
   const release = (() => {

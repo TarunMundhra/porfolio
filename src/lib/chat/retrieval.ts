@@ -93,3 +93,52 @@ export function selectRelevantChunks(
     .sort((left, right) => right.similarity - left.similarity || left.id.localeCompare(right.id))
     .slice(0, options.limit);
 }
+
+export const HR_OR_PROFILE_PATTERN =
+  /\b(hire|hiring|candidate|fit|readiness|qualification|qualifications|recommend|recruiter|interview|strength|strengths|strongest|superpower|superpowers|weakness|weaknesses|improve|improvement|growth|flaw|flaws|limitation|limitations|yourself|who are you|about you|tell me about you|background|journey|transition|motivation|passion|geophysics|achievement|achievements)\b|why.*(?:software|engineering|engineer|developer|coding|code|programming)|(?:took|take|taken|choose|chose|chosen|entered|enter|switch|switched|transition|transitioned)\s+(?:up\s+)?(?:the\s+)?(?:software|tech|programming|coding|engineering)/i;
+
+export function isCandidateProfileQuery(question: string): boolean {
+  return HR_OR_PROFILE_PATTERN.test(question.trim());
+}
+
+export function getCandidateProfileFallbackChunks(): RetrievedChunk[] {
+  return [
+    {
+      id: "profile-fallback-about",
+      sourceId: "about",
+      title: "About Tarun Mundhra",
+      url: "/#about",
+      section: "Education & Background",
+      similarity: 1,
+      text: "Tarun Mundhra is a Software Development Engineer with a B.S. (Hons.) in Exploration Geophysics from IIT Kharagpur. He transitioned from computational geophysics, linear algebra, and data structures into production software engineering, demonstrating rapid self-directed mastery with 83 production commits (+15,300 lines of code) and real-world distributed architectures. He focuses on high-impact systems architecture, backend engineering, and full-stack development.",
+    },
+    {
+      id: "profile-fallback-experience-juryassist",
+      sourceId: "experience",
+      title: "Professional experience",
+      url: "/#experience",
+      section: "JuryAssist - Founding Engineer",
+      similarity: 1,
+      text: "Founding Engineer at JuryAssist (Veritos UK legal tech platform), scaling adoption to 10,294 active users. Built 0-to-1 systems architecture with zero-knowledge 6-LLM consensus, cutting legal contract ingestion latency by >94% (<20s for 800+ pages via bulk ONNX parallelization), and implemented sub-50ms hybrid pgvector/BM25 search with distributed state locking.",
+    },
+    {
+      id: "profile-fallback-experience-rebac",
+      sourceId: "experience",
+      title: "Professional experience",
+      url: "/#experience",
+      section: "Quick Dry Cleaning Software - SDE",
+      similarity: 1,
+      text: "Software Development Engineer at Quick Dry Cleaning Software (DC Web Services). Re-architected the access control model from flat user-store mapping to hierarchical ReBAC with PostgreSQL Row-Level Security (RLS) across 6 microservices, eliminating O(N) database record duplication. Cut hot-path authorization latency to near-zero with in-memory caching and authored 83 production commits (+15,300 lines of code) with comprehensive Vitest coverage.",
+    },
+    {
+      id: "profile-fallback-projects-leadership",
+      sourceId: "projects",
+      title: "Portfolio projects",
+      url: "/#projects",
+      section: "Leadership & Mobile Deployment",
+      similarity: 1,
+      text: "Led a 20-member cross-functional team in Go, Redis, and TimescaleDB for an algorithmic trading simulator. Deployed KGP Presence mobile application to the Google Play Store with 100+ active installs. Proven track record in high-throughput systems, event pipelines with Temporal.io and BullMQ/Redis, and end-to-end full-stack delivery.",
+    },
+  ];
+}
+
