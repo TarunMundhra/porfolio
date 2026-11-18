@@ -122,8 +122,70 @@ describe("POST /api/chat", () => {
 
     expect(response.status).toBe(200);
     expect(response.headers.get("content-type")).toContain("application/x-ndjson");
-    expect(output.map((event) => event.type)).toEqual(["start", "token", "token", "citation", "done"]);
+    expect(output.map((event) => event.type)).toEqual(["start", "status", "token", "token", "citation", "done"]);
     expect(output).not.toContainEqual(expect.objectContaining({ value: "gemini-secret" }));
+  });
+
+  it("returns start and retrieval status before retrieval completes", async () => {
+    let finishRetrieval!: (chunks: typeof state.chunks) => void;
+    const retrieval = new Promise<typeof state.chunks>((resolve) => { finishRetrieval = resolve; });
+    state.retrieve.mockReturnValue(retrieval);
+
+    const responsePromise = POST(request({ question: "Tell me about the projects." }));
+    let response: Response | undefined;
+    try {
+      response = await Promise.race([
+        responsePromise,
+        new Promise<undefined>((resolve) => setTimeout(() => resolve(undefined), 100)),
+      ]);
+      expect(response).toBeInstanceOf(Response);
+
+      const reader = response!.body!.getReader();
+      const decoder = new TextDecoder();
+      const start = await reader.read();
+      const status = await reader.read();
+
+      expect(decoder.decode(start.value)).toContain('"type":"start"');
+      expect(decoder.decode(status.value)).toContain(
+        '"type":"status","message":"Finding relevant experience…"',
+      );
+      await reader.cancel();
+    } finally {
+      finishRetrieval(state.chunks);
+      if (!response) await (await responsePromise).body?.cancel();
+    }
+  });
+
+  it("streams a safe error when retrieval fails after the response starts", async () => {
+    state.embed.mockRejectedValue(new Error("private embedding failure"));
+
+    const output = await events(await POST(request({ question: "Tell me about the projects." })));
+
+    expect(output).toEqual([
+      expect.objectContaining({ type: "start" }),
+      expect.objectContaining({ type: "status", message: "Finding relevant experience…" }),
+      expect.objectContaining({ type: "error", code: "unavailable" }),
+    ]);
+    expect(JSON.stringify(output)).not.toContain("private embedding failure");
+    expect(state.generate).not.toHaveBeenCalled();
+  });
+
+  it("does not start generation when the client cancels during retrieval", async () => {
+    let finishRetrieval!: (chunks: typeof state.chunks) => void;
+    state.retrieve.mockReturnValue(new Promise((resolve) => { finishRetrieval = resolve; }));
+    const response = await POST(request({ question: "Tell me about the projects." }));
+    const reader = response.body!.getReader();
+
+    await reader.read();
+    await reader.read();
+    await reader.cancel();
+    finishRetrieval(state.chunks);
+    await Promise.resolve();
+
+    expect(state.generate).not.toHaveBeenCalled();
+    expect(state.persistConversation).toHaveBeenCalledWith(expect.objectContaining({
+      event: expect.objectContaining({ errorCode: "cancelled", providerStatus: "cancelled" }),
+    }));
   });
 
   it("emits privacy-safe timing logs for streamed and no-chunks completions", async () => {
@@ -241,6 +303,7 @@ describe("POST /api/chat", () => {
     const response = await POST(request({ question: "Tell me about the projects." }));
     const reader = response.body!.getReader();
     await reader.read();
+    await reader.read();
     const first = await Promise.race([
       reader.read(),
       new Promise<never>((_, reject) => setTimeout(() => reject(new Error("first token delayed")), 100)),
@@ -342,6 +405,7 @@ describe("POST /api/chat", () => {
 
     expect(output).toEqual([
       expect.objectContaining({ type: "start" }),
+      expect.objectContaining({ type: "status", message: "Finding relevant experience…" }),
       expect.objectContaining({ type: "token", value: "I don't have that information." }),
       expect.objectContaining({ type: "done" }),
     ]);

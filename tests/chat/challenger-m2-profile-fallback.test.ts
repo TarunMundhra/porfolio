@@ -212,6 +212,7 @@ describe("Milestone 2 Challenger Empirical Test Suite", () => {
         // Must stream "I don't have that information."
         expect(eventList).toEqual([
           expect.objectContaining({ type: "start" }),
+          expect.objectContaining({ type: "status", message: "Finding relevant experience…" }),
           expect.objectContaining({ type: "token", value: "I don't have that information." }),
           expect.objectContaining({ type: "done" }),
         ]);

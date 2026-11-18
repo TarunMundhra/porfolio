@@ -158,6 +158,57 @@ describe("PortfolioAssistant", () => {
     expect(log.mock.calls.filter(([event]) => event === "[chat] first_token")).toHaveLength(1);
   });
 
+  it("shows retrieval status until the first answer token arrives", async () => {
+    let enqueue!: (event: Record<string, unknown>) => void;
+    const stream = new ReadableStream<Uint8Array>({
+      start(controller) {
+        enqueue = (event) => controller.enqueue(
+          new TextEncoder().encode(`${JSON.stringify(event)}\n`),
+        );
+      },
+    });
+    vi.spyOn(global, "fetch").mockResolvedValue(new Response(stream));
+
+    render(React.createElement(PortfolioAssistant));
+    fireEvent.click(screen.getByRole("button", { name: /ask about tarun/i }));
+    fireEvent.change(screen.getByRole("textbox", { name: /question/i }), {
+      target: { value: "Tell me about projects" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /send question/i }));
+
+    enqueue({ type: "status", message: "Finding relevant experience…" });
+    expect(await screen.findByText("Finding relevant experience…")).toBeInTheDocument();
+
+    enqueue({ type: "token", value: "Tarun built JuryAssist." });
+    expect(await screen.findByText("Tarun built JuryAssist.")).toBeInTheDocument();
+    expect(screen.queryByText("Finding relevant experience…")).not.toBeInTheDocument();
+  });
+
+  it("does not preserve retrieval status when stopped before the first token", async () => {
+    let enqueue!: (event: Record<string, unknown>) => void;
+    const stream = new ReadableStream<Uint8Array>({
+      start(controller) {
+        enqueue = (event) => controller.enqueue(
+          new TextEncoder().encode(`${JSON.stringify(event)}\n`),
+        );
+      },
+    });
+    vi.spyOn(global, "fetch").mockResolvedValue(new Response(stream));
+
+    render(React.createElement(PortfolioAssistant));
+    fireEvent.click(screen.getByRole("button", { name: /ask about tarun/i }));
+    fireEvent.change(screen.getByRole("textbox", { name: /question/i }), {
+      target: { value: "Tell me about projects" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /send question/i }));
+
+    enqueue({ type: "status", message: "Finding relevant experience…" });
+    expect(await screen.findByText("Finding relevant experience…")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /stop generating/i }));
+
+    expect(screen.queryByText("Finding relevant experience…")).not.toBeInTheDocument();
+  });
+
   it("stops an in-flight response without an error and preserves partial content", async () => {
     let resolveRequest!: (response: Response) => void;
     vi.spyOn(global, "fetch").mockReturnValue(new Promise((resolve) => { resolveRequest = resolve; }));

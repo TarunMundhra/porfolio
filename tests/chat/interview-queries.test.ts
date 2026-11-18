@@ -662,6 +662,7 @@ describe("POST /api/chat — Interview & HR Queries Integration Test Suite", () 
       const eventList = await parseEvents(response);
       expect(eventList).toEqual([
         expect.objectContaining({ type: "start" }),
+        expect.objectContaining({ type: "status", message: "Finding relevant experience…" }),
         expect.objectContaining({ type: "token", value: "I don't have that information." }),
         expect.objectContaining({ type: "done" }),
       ]);

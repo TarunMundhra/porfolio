@@ -23,6 +23,7 @@ export interface RetrievedChunk extends Citation {
 
 export type StreamEvent =
   | { type: "start"; requestId: string }
+  | { type: "status"; message: string }
   | { type: "token"; value: string }
   | { type: "citation"; citation: Citation }
   | { type: "done"; requestId: string }

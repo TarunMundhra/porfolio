@@ -209,6 +209,7 @@ describe("Empirical Challenger 2: Milestone 3 Adversarial Verification", () => {
         // Event stream must match canonical safe fallback sequence
         expect(events).toEqual([
           expect.objectContaining({ type: "start" }),
+          expect.objectContaining({ type: "status", message: "Finding relevant experience…" }),
           expect.objectContaining({ type: "token", value: "I don't have that information." }),
           expect.objectContaining({ type: "done" }),
         ]);

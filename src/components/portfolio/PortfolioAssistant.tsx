@@ -60,7 +60,7 @@ export default function PortfolioAssistant() {
     setMessages((current) =>
       current.map((message) =>
         message.id === active.assistantId
-          ? { ...message, content: finalContent || message.content, streaming: false }
+          ? { ...message, content: finalContent, streaming: false }
           : message,
       ),
     );
@@ -213,12 +213,20 @@ export default function PortfolioAssistant() {
           } catch {
             continue;
           }
-          if (event.type === "token" && typeof event.value === "string") {
+          if (event.type === "status" && event.message && firstTokenAt === undefined) {
+            setMessages((current) =>
+              current.map((message) =>
+                message.id === assistantId ? { ...message, content: event.message! } : message,
+              ),
+            );
+          } else if (event.type === "token" && typeof event.value === "string") {
             if (firstTokenAt === undefined && event.value.length > 0) {
               firstTokenAt = performance.now();
               console.info("[chat] first_token", {
                 elapsedMs: Math.round(firstTokenAt - startedAt),
               });
+              targetTextRef.current = "";
+              displayedTextRef.current = "";
             }
             targetTextRef.current += event.value;
             advanceTypewriter();

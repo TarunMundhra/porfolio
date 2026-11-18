@@ -218,6 +218,7 @@ describe("Milestone 2 Challenger & Adversarial Test Suite", () => {
       expect(citationEvents.length).toBe(4);
       expect(events.map((e) => e.type)).toEqual([
         "start",
+        "status",
         "token",
         "token",
         "citation",
@@ -256,6 +257,7 @@ describe("Milestone 2 Challenger & Adversarial Test Suite", () => {
       const events = await parseEvents(res);
       expect(events).toEqual([
         expect.objectContaining({ type: "start" }),
+        expect.objectContaining({ type: "status", message: "Finding relevant experience…" }),
         expect.objectContaining({ type: "token", value: "I don't have that information." }),
         expect.objectContaining({ type: "done" }),
       ]);

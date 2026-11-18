@@ -26,7 +26,7 @@ import {
   getCandidateProfileFallbackChunks,
   isCandidateProfileQuery,
 } from "@/lib/chat/retrieval";
-import type { Citation, StreamEvent } from "@/lib/chat/contracts";
+import type { Citation, RetrievedChunk, StreamEvent } from "@/lib/chat/contracts";
 
 const encoder = new TextEncoder();
 const MAX_BODY_BYTES = 32_000;
@@ -401,30 +401,6 @@ export async function POST(request: Request): Promise<Response> {
     return errorResponse("refused", 200, correlationId);
   }
 
-  let chunks;
-  try {
-    const [embedding] = await current.embedder.embed([input.question]);
-    chunks = await current.database.retrieveChunks(embedding, {
-      limit: 8,
-      minimumSimilarity: 0.55,
-    });
-    logTiming(correlationId, "retrieval_completed", startedAt);
-  } catch {
-    current.inFlight.release();
-    recordOutcome(current, input, correlationId, {
-      answer: "Unable to complete response",
-      error: true,
-      errorCode: "unavailable",
-      providerStatus: "retrieval",
-    });
-    logFailure(correlationId, "retrieval", "unavailable");
-    return errorResponse("unavailable", 503, correlationId);
-  }
-
-  if ((!chunks || chunks.length === 0) && isCandidateProfileQuery(input.question)) {
-    chunks = getCandidateProfileFallbackChunks();
-  }
-
   const release = (() => {
     let released = false;
     return () => {
@@ -434,33 +410,69 @@ export async function POST(request: Request): Promise<Response> {
       }
     };
   })();
-  let citations: Citation[];
-  let prompt: string;
-  try {
-    if (!Array.isArray(chunks)) throw new Error("invalid retrieval result");
-    citations = citationsFor(chunks);
-    prompt = buildGroundedPrompt(input.question, chunks);
-  } catch {
-    logFailure(correlationId, "stream_setup", "internal");
-    recordOutcome(current, input, correlationId, {
-      answer: "Unable to complete response",
-      error: true,
-      errorCode: "internal",
-      providerStatus: "validation",
-    });
-    release();
-    return errorResponse("internal", 500, correlationId);
-  }
   const requestController = new AbortController();
   let iterator: AsyncIterator<string> | undefined;
+  let chunks: RetrievedChunk[] = [];
+  let citations: Citation[] = [];
+  let prompt = "";
+  let preparation: Promise<void>;
   let finished = false;
   let assembled = "";
   let started = false;
   const body = new ReadableStream<Uint8Array>({
     start(controller) {
       controller.enqueue(encoder.encode(`${JSON.stringify({ type: "start", requestId: correlationId })}\n`));
+      controller.enqueue(encoder.encode(`${JSON.stringify({ type: "status", message: "Finding relevant experience…" })}\n`));
+      preparation = (async () => {
+        try {
+          const [embedding] = await current.embedder.embed([input.question]);
+          if (finished) return;
+          const retrieved = await current.database.retrieveChunks(embedding, {
+            limit: 8,
+            minimumSimilarity: 0.55,
+          });
+          if (finished) return;
+          logTiming(correlationId, "retrieval_completed", startedAt);
+          chunks = retrieved.length === 0 && isCandidateProfileQuery(input.question)
+            ? getCandidateProfileFallbackChunks()
+            : retrieved;
+        } catch {
+          if (finished) return;
+          finished = true;
+          recordOutcome(current, input, correlationId, {
+            answer: "Unable to complete response",
+            error: true,
+            errorCode: "unavailable",
+            providerStatus: "retrieval",
+          });
+          logFailure(correlationId, "retrieval", "unavailable");
+          controller.enqueue(encoder.encode(`${JSON.stringify({ type: "error", code: "unavailable", message: "Provider unavailable", correlationId })}\n`));
+          controller.close();
+          release();
+          return;
+        }
+        try {
+          if (!Array.isArray(chunks)) throw new Error("invalid retrieval result");
+          citations = citationsFor(chunks);
+          prompt = buildGroundedPrompt(input.question, chunks);
+        } catch {
+          finished = true;
+          logFailure(correlationId, "stream_setup", "internal");
+          recordOutcome(current, input, correlationId, {
+            answer: "Unable to complete response",
+            error: true,
+            errorCode: "internal",
+            providerStatus: "validation",
+          });
+          controller.enqueue(encoder.encode(`${JSON.stringify({ type: "error", code: "internal", message: "Unable to complete response", correlationId })}\n`));
+          controller.close();
+          release();
+        }
+      })();
     },
     async pull(controller) {
+      if (finished) return;
+      await preparation;
       if (finished) return;
       try {
         if (!chunks.length) {
