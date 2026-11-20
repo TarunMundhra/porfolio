@@ -4,6 +4,18 @@ import type { KnowledgeDocument, RetrievedChunk } from "./contracts";
 export const CHUNK_MAX_CHARACTERS = 500;
 export const CHUNK_OVERLAP_CHARACTERS = 60;
 
+const FLAGSHIP_PROJECT_QUERY_PATTERN =
+  /\b(?:strongest|best|top|flagship)\b.{0,40}\bprojects?\b|\bprojects?\b.{0,40}\b(?:strongest|best|top|flagship)\b/i;
+const EARLY_PROJECT_QUERY_PATTERN = /\b(?:GigFlow|TaskFlow(?: Pro)?)\b/i;
+const FLAGSHIP_PROJECT_RETRIEVAL_QUERY =
+  "Tarun flagship production projects JuryAssist KGP Presence Low-Latency AI Video Streaming Engine Algorithmic Trading Simulator";
+
+export function retrievalQueryFor(question: string): string {
+  return !EARLY_PROJECT_QUERY_PATTERN.test(question) && FLAGSHIP_PROJECT_QUERY_PATTERN.test(question.trim())
+    ? FLAGSHIP_PROJECT_RETRIEVAL_QUERY
+    : question;
+}
+
 function normalizeWhitespace(value: string): string {
   return value
     .replace(/\r\n?/g, "\n")

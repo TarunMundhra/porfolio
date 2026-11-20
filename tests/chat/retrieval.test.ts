@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { chunkDocument, selectRelevantChunks } from "@/lib/chat/retrieval";
+import { chunkDocument, retrievalQueryFor, selectRelevantChunks } from "@/lib/chat/retrieval";
 import { KNOWLEDGE_MANIFEST } from "@/data/knowledge/manifest";
 import {
   extractPdfText,
@@ -11,6 +11,27 @@ import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 
 describe("knowledge retrieval", () => {
+  it.each([
+    "What are Tarun's strongest projects?",
+    "Show me Tarun's best projects",
+    "What are Tarun's top projects?",
+    "Give me a deeper look at Tarun's flagship projects",
+  ])("expands broad flagship project retrieval for %s", (question) => {
+    const query = retrievalQueryFor(question);
+
+    expect(query).toContain("JuryAssist");
+    expect(query).toContain("KGP Presence");
+    expect(query).toContain("Low-Latency AI Video Streaming Engine");
+    expect(query).toContain("Algorithmic Trading Simulator");
+  });
+
+  it("leaves specific and ordinary project queries unchanged", () => {
+    expect(retrievalQueryFor("Tell me about GigFlow")).toBe("Tell me about GigFlow");
+    expect(retrievalQueryFor("Is GigFlow one of Tarun's best projects?")).toBe("Is GigFlow one of Tarun's best projects?");
+    expect(retrievalQueryFor("Is TaskFlow one of Tarun's top projects?")).toBe("Is TaskFlow one of Tarun's top projects?");
+    expect(retrievalQueryFor("What projects has Tarun built?")).toBe("What projects has Tarun built?");
+  });
+
   it("creates stable overlapping chunks with source metadata", () => {
     const document = {
       sourceId: "resume",
@@ -105,8 +126,11 @@ describe("knowledge retrieval", () => {
       }),
     };
     const result = await indexKnowledge(provider, database as unknown as KnowledgeIndexDatabase);
+    const indexedText = embeddings.join("\n");
     expect(result.documentCount).toBe(KNOWLEDGE_MANIFEST.length);
     expect(embeddings.length).toBe(result.chunkCount);
+    expect(indexedText).not.toMatch(/Full-Stack Developer/i);
+    expect(indexedText).not.toMatch(/\b(?:GigFlow|TaskFlow(?: Pro)?)\b/i);
     expect(operations.at(-1)).toBe("promote");
     expect(operations.filter((operation) => operation === "create")).toHaveLength(1);
   });

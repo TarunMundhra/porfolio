@@ -130,51 +130,6 @@ const projects: Project[] = [
     links: [],
   },
   {
-    title: "GigFlow",
-    emoji: "🌊",
-    description:
-      "A MERN-based freelance marketplace with a polished frontend and a secure backend for gigs, bids, and user workflows.",
-    highlights: [
-      "Built a responsive landing, gig browsing, and bid submission experience optimized for recruiter review",
-      "Implemented JWT-based auth, profile updates, and protected routes for users, gigs, and bids",
-      "Modeled gig and bid workflows in MongoDB with Mongoose and role-aware actions",
-      "Integrated API communication with Axios and schema validation for safer form flows",
-    ],
-    tech: [
-      "Next.js",
-      "React",
-      "Tailwind CSS",
-      "TypeScript",
-      "Axios",
-      "Zod",
-      "React Hook Form",
-      "Node.js",
-      "Express",
-      "MongoDB",
-      "JWT",
-    ],
-    links: [
-      {
-        label: "Live Demo",
-        href: "https://gig-flow-frontend-eight.vercel.app/",
-        tooltip: "Open live demo",
-        kind: "demo",
-      },
-      {
-        label: "Frontend Code",
-        href: "https://github.com/TarunMundhra/GigFlow_Frontend",
-        tooltip: "Open frontend repo",
-        kind: "code",
-      },
-      {
-        label: "Backend Code",
-        href: "https://github.com/TarunMundhra/GigFlow",
-        tooltip: "Open backend repo",
-        kind: "code",
-      },
-    ],
-  },
-  {
     title: "Algorithmic Trading Simulator",
     emoji: "📈",
     description:
@@ -198,33 +153,6 @@ const projects: Project[] = [
       {
         label: "View Code",
         href: "https://github.com/GC-OpenSoft-2026/Algorithmic-Trading-Simulator",
-        tooltip: "Open repository",
-        kind: "code",
-      },
-    ],
-  },
-  {
-    title: "TaskFlow Pro",
-    emoji: "⚙️",
-    description:
-      "A graph-based task management platform with dependency-aware scheduling and priority-driven execution.",
-    highlights: [
-      "Developed a full-stack task manager with graph-based dependency modeling",
-      "Implemented cycle detection and topological sorting (O(V + E)) for valid task order",
-      "Built a priority queue-driven scheduling engine using heap data structures",
-      "Optimized backend performance by validating only affected subgraphs",
-    ],
-    tech: [
-      "Node.js",
-      "Express.js",
-      "Graph Algorithms",
-      "Priority Queue",
-      "JWT",
-    ],
-    links: [
-      {
-        label: "View Code",
-        href: "https://github.com/TarunMundhra/taskFlow",
         tooltip: "Open repository",
         kind: "code",
       },

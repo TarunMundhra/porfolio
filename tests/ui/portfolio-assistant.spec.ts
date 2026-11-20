@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import PortfolioAssistant from "@/components/portfolio/PortfolioAssistant";
@@ -20,6 +20,32 @@ describe("PortfolioAssistant", () => {
     fireEvent.keyDown(document, { key: "Escape" });
     await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
     expect(launcher).toHaveFocus();
+  });
+
+  it("keeps the conversation when switching to focus mode and offers the full page", async () => {
+    const body = [
+      JSON.stringify({ type: "token", value: "Tarun delivers production systems. [1]" }),
+      JSON.stringify({
+        type: "citation",
+        citation: { title: "Experience", url: "/#experience", indices: [1] },
+      }),
+      JSON.stringify({ type: "done", requestId: "layout" }),
+    ].join("\n");
+    vi.spyOn(global, "fetch").mockResolvedValue(new Response(body));
+
+    render(React.createElement(PortfolioAssistant));
+    fireEvent.click(screen.getByRole("button", { name: /ask about tarun/i }));
+    fireEvent.change(screen.getByRole("textbox", { name: /question/i }), {
+      target: { value: "Why hire Tarun?" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /send question/i }));
+
+    expect(await screen.findByText(/Tarun delivers production systems/i)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /focus mode/i }));
+
+    expect(screen.getByText(/Tarun delivers production systems/i)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /focus mode/i })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("link", { name: /open full page/i })).toHaveAttribute("href", "/assistant");
   });
 
   it("offers suggested questions and streams sanitized assistant content", async () => {
@@ -59,6 +85,19 @@ describe("PortfolioAssistant", () => {
       "href",
       "/Tarun-Mundhra-Resume.pdf",
     );
+  });
+
+  it("shows a readable safe error when the chat request is rejected", async () => {
+    vi.spyOn(global, "fetch").mockResolvedValue(new Response(null, { status: 403 }));
+
+    render(React.createElement(PortfolioAssistant));
+    fireEvent.click(screen.getByRole("button", { name: /ask about tarun/i }));
+    fireEvent.change(screen.getByRole("textbox", { name: /question/i }), {
+      target: { value: "Tell me about Tarun" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /send question/i }));
+
+    expect(await screen.findByText("Unable to complete that response. Please try again.")).toBeInTheDocument();
   });
 
   it("deduplicates citations with identical URLs and titles without duplicate key warnings", async () => {
@@ -158,6 +197,34 @@ describe("PortfolioAssistant", () => {
     expect(log.mock.calls.filter(([event]) => event === "[chat] first_token")).toHaveLength(1);
   });
 
+  it("drains buffered answer text smoothly after done instead of flushing it at once", async () => {
+    let enqueue!: (event: Record<string, unknown>) => void;
+    const stream = new ReadableStream<Uint8Array>({
+      start(controller) {
+        enqueue = (event) => controller.enqueue(
+          new TextEncoder().encode(`${JSON.stringify(event)}\n`),
+        );
+      },
+    });
+    const log = vi.spyOn(console, "info").mockImplementation(() => undefined);
+    vi.spyOn(global, "fetch").mockResolvedValue(new Response(stream));
+    const fullAnswer = "A".repeat(600);
+
+    render(React.createElement(PortfolioAssistant));
+    fireEvent.click(screen.getByRole("button", { name: /ask about tarun/i }));
+    fireEvent.change(screen.getByRole("textbox", { name: /question/i }), {
+      target: { value: "Tell me about Tarun" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /send question/i }));
+
+    enqueue({ type: "token", value: fullAnswer });
+    enqueue({ type: "done", requestId: "smooth" });
+    await waitFor(() => expect(log).toHaveBeenCalledWith("[chat] first_token", expect.anything()));
+
+    expect(screen.queryByText(fullAnswer)).not.toBeInTheDocument();
+    expect(await screen.findByText(fullAnswer, {}, { timeout: 2_000 })).toBeInTheDocument();
+  });
+
   it("shows retrieval status until the first answer token arrives", async () => {
     let enqueue!: (event: Record<string, unknown>) => void;
     const stream = new ReadableStream<Uint8Array>({
@@ -182,6 +249,38 @@ describe("PortfolioAssistant", () => {
     enqueue({ type: "token", value: "Tarun built JuryAssist." });
     expect(await screen.findByText("Tarun built JuryAssist.")).toBeInTheDocument();
     expect(screen.queryByText("Finding relevant experience…")).not.toBeInTheDocument();
+  });
+
+  it("offers focused follow-ups only after completion and submits the selected question once", async () => {
+    let enqueue!: (event: Record<string, unknown>) => void;
+    const stream = new ReadableStream<Uint8Array>({
+      start(controller) {
+        enqueue = (event) => controller.enqueue(
+          new TextEncoder().encode(`${JSON.stringify(event)}\n`),
+        );
+      },
+    });
+    const fetch = vi.spyOn(global, "fetch")
+      .mockResolvedValueOnce(new Response(stream))
+      .mockResolvedValueOnce(new Response(`${JSON.stringify({ type: "done", requestId: "follow-up" })}\n`));
+
+    render(React.createElement(PortfolioAssistant));
+    fireEvent.click(screen.getByRole("button", { name: /ask about tarun/i }));
+    const dialog = screen.getByRole("dialog");
+    fireEvent.change(within(dialog).getByRole("textbox", { name: /question/i }), {
+      target: { value: "Why should I hire you?" },
+    });
+    fireEvent.click(within(dialog).getByRole("button", { name: /send question/i }));
+
+    expect(within(dialog).queryByRole("button", { name: "Architecture" })).not.toBeInTheDocument();
+    enqueue({ type: "token", value: "Tarun delivers production impact. [1]" });
+    enqueue({ type: "done", requestId: "initial" });
+
+    fireEvent.click(await within(dialog).findByRole("button", { name: "Architecture" }, { timeout: 2_000 }));
+    await waitFor(() => expect(fetch).toHaveBeenCalledTimes(2));
+    expect(JSON.parse(fetch.mock.calls[1][1]?.body as string)).toEqual({
+      question: "Give me a deeper look at Tarun's systems architecture work.",
+    });
   });
 
   it("does not preserve retrieval status when stopped before the first token", async () => {

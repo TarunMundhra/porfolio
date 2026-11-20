@@ -25,6 +25,7 @@ import { createSharedRateLimiter, type SharedRateLimiter } from "@/lib/chat/rate
 import {
   getCandidateProfileFallbackChunks,
   isCandidateProfileQuery,
+  retrievalQueryFor,
 } from "@/lib/chat/retrieval";
 import type { Citation, RetrievedChunk, StreamEvent } from "@/lib/chat/contracts";
 
@@ -284,18 +285,23 @@ function citationsFor(chunks: ReadonlyArray<{
   url: string;
   section?: string;
 }>): Citation[] {
-  const seen = new Set<string>();
+  const seen = new Map<string, Citation>();
   const citations: Citation[] = [];
-  for (const { sourceId, title, url, section } of chunks) {
+  for (const [index, { sourceId, title, url, section }] of chunks.entries()) {
     const key = `${url}|${title}|${section ?? ""}`;
-    if (!seen.has(key)) {
-      seen.add(key);
-      citations.push({
+    const existing = seen.get(key);
+    if (existing) {
+      existing.indices?.push(index + 1);
+    } else {
+      const citation: Citation = {
         sourceId,
         title,
         url,
+        indices: [index + 1],
         ...(section ? { section } : {}),
-      });
+      };
+      seen.set(key, citation);
+      citations.push(citation);
     }
   }
   return citations;
@@ -425,7 +431,7 @@ export async function POST(request: Request): Promise<Response> {
       controller.enqueue(encoder.encode(`${JSON.stringify({ type: "status", message: "Finding relevant experience…" })}\n`));
       preparation = (async () => {
         try {
-          const [embedding] = await current.embedder.embed([input.question]);
+          const [embedding] = await current.embedder.embed([retrievalQueryFor(input.question)]);
           if (finished) return;
           const retrieved = await current.database.retrieveChunks(embedding, {
             limit: 8,

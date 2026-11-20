@@ -29,6 +29,40 @@ describe("chat guardrails", () => {
     expect(prompt).toMatch(/citation/i);
   });
 
+  it("builds a progressive-disclosure response contract for recruiter questions", () => {
+    const prompt = buildGroundedPrompt("Why should I hire you?", [
+      { id: "profile", title: "Profile", text: "Tarun has production engineering experience.", url: "/#about" },
+    ]);
+
+    expect(prompt).toContain("70 to 110 words");
+    expect(prompt).toContain("no more than three short proof points");
+    expect(prompt).toContain("up to 250 words");
+    expect(prompt).toContain("one short, relevant follow-up question");
+  });
+
+  it("prioritizes flagship work for broad strongest-project questions", () => {
+    const prompt = buildGroundedPrompt("What are Tarun's strongest projects?", [
+      { id: "projects", title: "Portfolio projects", text: "Tarun has built several software projects.", url: "/#projects" },
+    ]);
+
+    expect(prompt).toContain("JuryAssist");
+    expect(prompt).toContain("KGP Presence");
+    expect(prompt).toContain("Low-Latency AI Video Streaming Engine");
+    expect(prompt).toContain("Algorithmic Trading Simulator");
+    expect(prompt).toMatch(/select up to three/i);
+    expect(prompt).toContain("Do not present GigFlow or TaskFlow as flagship work");
+    expect(prompt).not.toContain("only when the user specifically asks about them");
+  });
+
+  it("uses Software Development Engineer as the canonical professional title", () => {
+    const prompt = buildGroundedPrompt("What does Tarun do?", [
+      { id: "profile", title: "Profile", text: "Tarun builds production systems.", url: "/#about" },
+    ]);
+
+    expect(prompt).toContain("Never use \"Full-Stack Developer\" as Tarun's title");
+    expect(prompt).toContain("Use \"Software Development Engineer (SDE)\"");
+  });
+
   it("returns a safe fallback for empty, overlong, secret-like, or unsafe answers", () => {
     const fallback = "I don't have that information.";
     expect(validateAnswer("", []).kind).toBe("fallback");

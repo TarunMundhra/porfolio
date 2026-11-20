@@ -8,6 +8,7 @@ export interface Citation {
   title: string;
   url: string;
   section?: string;
+  indices?: number[];
 }
 
 export interface RetrievedChunk extends Citation {

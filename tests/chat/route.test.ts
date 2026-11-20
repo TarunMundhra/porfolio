@@ -123,7 +123,19 @@ describe("POST /api/chat", () => {
     expect(response.status).toBe(200);
     expect(response.headers.get("content-type")).toContain("application/x-ndjson");
     expect(output.map((event) => event.type)).toEqual(["start", "status", "token", "token", "citation", "done"]);
+    expect(output.find((event) => event.type === "citation")).toEqual({
+      type: "citation",
+      citation: expect.objectContaining({ indices: [1] }),
+    });
     expect(output).not.toContainEqual(expect.objectContaining({ value: "gemini-secret" }));
+  });
+
+  it("embeds the flagship retrieval query for a broad strongest-project request", async () => {
+    await events(await POST(request({ question: "What are Tarun's strongest projects?" })));
+
+    expect(state.embed).toHaveBeenCalledWith([
+      "Tarun flagship production projects JuryAssist KGP Presence Low-Latency AI Video Streaming Engine Algorithmic Trading Simulator",
+    ]);
   });
 
   it("returns start and retrieval status before retrieval completes", async () => {

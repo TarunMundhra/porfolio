@@ -2,7 +2,7 @@
 
 import { motion } from "framer-motion";
 import { useNavStore } from "@/store/useNavStore";
-import { FileDown, ChevronDown, ShieldCheck } from "lucide-react";
+import { Bot, FileDown, ChevronDown, ShieldCheck } from "lucide-react";
 import Image from "next/image";
 
 export default function HeroSection() {
@@ -35,7 +35,7 @@ export default function HeroSection() {
             <div className="rounded-full bg-[#020617] p-1">
               <Image
                 src="/Tarun.jpeg"
-                alt="Tarun Mundhra - Full-Stack Developer"
+                alt="Tarun Mundhra - Software Development Engineer"
                 width={128}
                 height={128}
                 className="h-28 w-28 sm:h-32 sm:w-32 rounded-full object-cover"
@@ -71,6 +71,13 @@ export default function HeroSection() {
           >
             View Projects
           </button>
+          <a
+            href="/assistant"
+            className="inline-flex items-center gap-2 rounded-xl bg-emerald-400 px-6 py-2.5 text-sm font-semibold text-slate-950 transition-all hover:-translate-y-0.5 hover:bg-emerald-300 hover:shadow-lg hover:shadow-emerald-500/20 active:translate-y-0"
+          >
+            <Bot size={16} />
+            Ask Portfolio AI
+          </a>
           <a
             href="/Tarun-Mundhra-Resume.pdf"
             target="_blank"

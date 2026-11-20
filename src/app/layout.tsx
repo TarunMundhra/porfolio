@@ -1,16 +1,17 @@
 import type { Metadata } from "next";
+import { PortfolioAssistantProvider } from "@/components/portfolio/PortfolioAssistantProvider";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Tarun Mundhra | Full-Stack Developer & Software Engineer",
+  title: "Tarun Mundhra | Software Development Engineer",
   description:
-    "Portfolio of Tarun Mundhra, a Full-Stack Developer and Software Engineer at IIT Kharagpur specializing in trading systems, scalable backend architectures, and cross-platform applications.",
+    "Portfolio of Tarun Mundhra, a Software Development Engineer at IIT Kharagpur specializing in trading systems, scalable backend architectures, and AI-native applications.",
   keywords: [
     "Tarun Mundhra",
     "Portfolio",
     "IIT Kharagpur",
     "Trading Systems",
-    "Full-Stack Developer",
+    "Software Development Engineer",
     "Backend Engineering",
     "Software Engineer",
   ],
@@ -20,18 +21,18 @@ export const metadata: Metadata = {
     icon: "/favicon.svg",
   },
   openGraph: {
-    title: "Tarun Mundhra | Full-Stack Developer & Software Engineer",
+    title: "Tarun Mundhra | Software Development Engineer",
     description:
-      "Portfolio of Tarun Mundhra, a Full-Stack Developer and Software Engineer at IIT Kharagpur specializing in trading systems, scalable backend architectures, and cross-platform applications.",
+      "Portfolio of Tarun Mundhra, a Software Development Engineer at IIT Kharagpur specializing in trading systems, scalable backend architectures, and AI-native applications.",
     siteName: "Tarun Mundhra",
     type: "website",
     url: "https://tarunmundhra.tech/",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Tarun Mundhra | Full-Stack Developer & Software Engineer",
+    title: "Tarun Mundhra | Software Development Engineer",
     description:
-      "Portfolio of Tarun Mundhra, a Full-Stack Developer and Software Engineer at IIT Kharagpur specializing in trading systems, scalable backend architectures, and cross-platform applications.",
+      "Portfolio of Tarun Mundhra, a Software Development Engineer at IIT Kharagpur specializing in trading systems, scalable backend architectures, and AI-native applications.",
   },
   verification: {
     google: "P2QNcU64ZI-7K9baFXnsSnFpaSASYoX4Tkgm_jA-hZU",
@@ -48,7 +49,7 @@ export default function RootLayout({
     "@type": "Person",
     name: "Tarun Mundhra",
     url: "https://tarunmundhra.tech/",
-    jobTitle: "Full-Stack Developer",
+    jobTitle: "Software Development Engineer",
     alumniOf: {
       "@type": "CollegeOrUniversity",
       name: "IIT Kharagpur",
@@ -76,7 +77,7 @@ export default function RootLayout({
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(personSchema) }}
         />
-        {children}
+        <PortfolioAssistantProvider>{children}</PortfolioAssistantProvider>
       </body>
     </html>
   );

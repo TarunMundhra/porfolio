@@ -2,6 +2,8 @@
 
 import type { ReactNode } from "react";
 
+type Citation = { title: string; url: string; section?: string; indices?: number[] };
+
 const APPROVED_URLS = new Set([
   "/",
   "/#about",
@@ -18,7 +20,7 @@ export function isApprovedUrl(url: string): boolean {
   return /^https:\/\/github\.com\/(?:TarunMundhra|KGP-Presence|GC-OpenSoft-2026)(?:\/[\w./-]+)?$/.test(url);
 }
 
-function parseInline(text: string): ReactNode[] {
+function parseInline(text: string, citations: ReadonlyArray<Citation>): ReactNode[] {
   const nodes: ReactNode[] = [];
   const pattern = /(\[([^\]]+)\]\(([^)\s]+)\)|\*\*([^*]+)\*\*|`([^`]+)`|\[(\d+(?:,\s*\d+)*)\])/g;
   let cursor = 0;
@@ -60,14 +62,25 @@ function parseInline(text: string): ReactNode[] {
         </code>,
       );
     } else if (match[6]) {
-      nodes.push(
-        <span
-          key={`${match.index}-cite`}
-          className="inline-flex items-center justify-center mx-0.5 px-1 py-0.2 rounded text-[11px] font-mono font-medium bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 align-baseline"
-        >
-          [{match[6]}]
-        </span>,
-      );
+      const matchIndex = match.index;
+      const references = match[6].split(",").map((value) => Number(value.trim()));
+      const links = references.flatMap((reference) => {
+        const citation = citations.find((candidate) => candidate.indices?.includes(reference));
+        if (!citation || !isApprovedUrl(citation.url)) return [];
+        return [
+          <a
+            key={`${matchIndex}-cite-${reference}`}
+            href={citation.url}
+            target={citation.url.startsWith("http") ? "_blank" : undefined}
+            rel={citation.url.startsWith("http") ? "noreferrer noopener" : undefined}
+            aria-label={`Source ${reference}: ${citation.title}`}
+            className="mx-0.5 inline-flex items-center justify-center rounded border border-emerald-500/30 bg-emerald-500/15 px-1 font-mono text-[11px] font-medium text-emerald-300 transition-colors hover:bg-emerald-500/25 hover:text-emerald-100"
+          >
+            [{reference}]
+          </a>,
+        ];
+      });
+      nodes.push(...links);
     }
 
     cursor = match.index + match[0].length;
@@ -88,7 +101,7 @@ function formatListItem(item: string): string {
   return item;
 }
 
-function renderMarkdown(value: string): ReactNode {
+function renderMarkdown(value: string, citations: ReadonlyArray<Citation>): ReactNode {
   const withoutHtml = value.replace(/<[^>]*>/g, "");
   if (!withoutHtml) return null;
 
@@ -109,7 +122,7 @@ function renderMarkdown(value: string): ReactNode {
           {items.map((item, index) => (
             <li key={index} className="flex items-start gap-2 leading-relaxed text-slate-200">
               <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-400/80" aria-hidden="true" />
-              <div className="flex-1">{parseInline(formatListItem(item))}</div>
+              <div className="flex-1">{parseInline(formatListItem(item), citations)}</div>
             </li>
           ))}
         </ul>,
@@ -137,7 +150,7 @@ function renderMarkdown(value: string): ReactNode {
     if (headingMatch) {
       blocks.push(
         <h4 key={`heading-${blocks.length}`} className="mt-3 mb-1 font-semibold text-emerald-300 first:mt-0">
-          {parseInline(headingMatch[2])}
+          {parseInline(headingMatch[2], citations)}
         </h4>,
       );
       continue;
@@ -145,7 +158,7 @@ function renderMarkdown(value: string): ReactNode {
 
     blocks.push(
       <p key={`p-${blocks.length}`} className="mb-2 leading-relaxed text-slate-200 last:mb-0">
-        {parseInline(trimmed)}
+        {parseInline(trimmed, citations)}
       </p>,
     );
   }
@@ -164,8 +177,15 @@ export default function AssistantMessage({
   content: string;
   role: "user" | "assistant" | "error";
   streaming?: boolean;
-  citations?: ReadonlyArray<{ title: string; url: string; section?: string }>;
+  citations?: ReadonlyArray<Citation>;
 }) {
+  const approvedCitations = citations
+    .filter((citation) => isApprovedUrl(citation.url))
+    .filter(
+      (citation, index, list) =>
+        index === list.findIndex((candidate) => candidate.url === citation.url),
+    );
+
   return (
     <div
       className={`max-w-[90%] rounded-2xl px-3.5 py-2.5 text-sm leading-6 ${
@@ -177,35 +197,24 @@ export default function AssistantMessage({
       }`}
       data-message-role={role}
     >
-      {renderMarkdown(content)}
+      {renderMarkdown(content, approvedCitations)}
       {streaming && (
         <span aria-label="Assistant is typing" className="ml-1 inline-block animate-pulse text-emerald-400 font-bold">
           ▌
         </span>
       )}
-      {role === "assistant" && citations.length > 0 && (
+      {role === "assistant" && approvedCitations.length > 0 && (
         <div className="mt-2 flex flex-wrap gap-1.5 border-t border-white/10 pt-2">
-          {citations
-            .filter((citation) => isApprovedUrl(citation.url))
-            .filter(
-              (citation, index, list) =>
-                index ===
-                list.findIndex(
-                  (c) =>
-                    c.url === citation.url &&
-                    c.title === citation.title &&
-                    (c.section ?? "") === (citation.section ?? ""),
-                ),
-            )
-            .map((citation, index) => (
+          <span className="w-full text-[10px] font-medium uppercase tracking-wider text-slate-500">Sources</span>
+          {approvedCitations.map((citation) => (
               <a
-                key={`${citation.url}-${citation.title}-${citation.section ?? index}`}
+                key={citation.url}
                 href={citation.url}
                 target={citation.url.startsWith("http") ? "_blank" : undefined}
                 rel={citation.url.startsWith("http") ? "noreferrer noopener" : undefined}
                 className="rounded-full border border-emerald-300/20 bg-emerald-400/10 px-2 py-0.5 text-xs text-emerald-200"
               >
-                {citation.section ? `${citation.section}: ` : ""}{citation.title}
+                {citation.title}
               </a>
             ))}
         </div>
